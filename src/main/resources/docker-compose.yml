@@ -1,0 +1,62 @@
+networks:
+  smart-invite_net:
+    driver: bridge
+
+volumes:
+  dev_db_data:
+  prod_db_data:
+  redis_data:
+
+services:
+  dev-db:
+    image: postgres:17
+    container_name: res-smart_invite_dev
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: dev-root
+      POSTGRES_DB: dev_smart_invite_db
+    ports:
+      - "5430:5432"
+    volumes:
+      - dev_db_data:/var/lib/postgresql/data
+    networks:
+      - smart-invite_net
+
+  prod-db:
+    image: postgres:17
+    container_name: res-smart_invite_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: prod_smart_invite_db
+    ports:
+      - "5440:5432"
+    volumes:
+      - prod_db_data:/var/lib/postgresql/data
+    networks:
+      - smart-invite_net
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: smart_invite_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - smart-invite_net
+    command: redis-server --appendonly yes
+
+  adminer:
+    image: adminer
+    container_name: adminer_smart-invite
+    restart: always
+    ports:
+      - "8011:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: dev-db
+    networks:
+      - smart-invite_net

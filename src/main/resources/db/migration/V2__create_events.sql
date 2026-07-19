@@ -1,0 +1,38 @@
+CREATE TABLE events (
+
+    id BIGSERIAL PRIMARY KEY,
+
+    organizer_id BIGINT NOT NULL,
+
+    title VARCHAR(255) NOT NULL,
+
+    type VARCHAR(50),
+
+    status VARCHAR(30),
+
+    max_guests INTEGER,
+
+    has_plus_one BOOLEAN DEFAULT FALSE,
+
+    religious_location TEXT,
+    religious_time TIMESTAMP,
+
+    civil_location TEXT,
+    civil_time TIMESTAMP,
+
+    banquet_location TEXT,
+    banquet_time TIMESTAMP,
+
+    event_name_concerned1 VARCHAR(150),
+    event_name_concerned2 VARCHAR(150),
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_event_user
+        FOREIGN KEY (organizer_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_events_organizer ON events(organizer_id);
