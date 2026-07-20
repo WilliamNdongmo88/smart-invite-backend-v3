@@ -26,8 +26,15 @@ public class JwtService {
      */
     public String generateAccessToken(UserDetails userDetails) {
 
+        Map<String,Object> claims = new HashMap<>();
+
+        claims.put(
+                "type",
+                "ACCESS"
+        );
+
         return generateToken(
-                new HashMap<>(),
+                claims,
                 userDetails,
                 jwtProperties.getAccessTokenExpiration()
         );
@@ -39,10 +46,36 @@ public class JwtService {
      */
     public String generateRefreshToken(UserDetails userDetails) {
 
+        Map<String,Object> claims = new HashMap<>();
+
+        claims.put(
+                "type",
+                "REFRESH"
+        );
+
         return generateToken(
-                new HashMap<>(),
+                claims,
                 userDetails,
                 jwtProperties.getRefreshTokenExpiration()
+        );
+    }
+
+    /**
+     * Génère un token de réinitialisation du mot de passe.
+     */
+    public String generateResetPasswordToken(UserDetails userDetails) {
+
+        Map<String,Object> claims = new HashMap<>();
+
+        claims.put(
+                "type",
+                "RESET_PASSWORD"
+        );
+
+        return generateToken(
+                claims,
+                userDetails,
+                jwtProperties.getResetPasswordTokenExpiration()
         );
 
     }
@@ -57,23 +90,16 @@ public class JwtService {
     ) {
 
         return Jwts.builder()
-
                 .claims(extraClaims)
-
                 .subject(userDetails.getUsername())
-
                 .issuedAt(new Date())
-
                 .expiration(
                         new Date(
                                 System.currentTimeMillis() + expiration
                         )
                 )
-
                 .signWith(getSigningKey())
-
                 .compact();
-
     }
 
     /**
@@ -152,9 +178,28 @@ public class JwtService {
 
         String username = extractUsername(token);
 
-        return username.equals(userDetails.getUsername())
-                &&
-                !isTokenExpired(token);
+        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+
+    }
+
+    /**
+     * Vérifie que le JWT est un Access Token.
+     *
+     * Les Refresh Token ne doivent jamais
+     * être utilisés pour accéder aux API protégées.
+     */
+    public boolean isAccessToken(String token) {
+
+        String type =
+                extractClaim(
+                        token,
+                        claims -> claims.get(
+                                "type",
+                                String.class
+                        )
+                );
+
+        return "ACCESS".equals(type);
 
     }
 

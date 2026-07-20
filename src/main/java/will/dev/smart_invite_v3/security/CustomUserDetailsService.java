@@ -21,7 +21,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
                         new UsernameNotFoundException(
-                                "Utilisateur introuvable : " + email
+                                "Utilisateur introuvable"
                         ));
 
         return new CustomUserDetails(user);

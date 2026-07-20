@@ -15,7 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import will.dev.smart_invite_v3.security.JwtAuthenticationFilter;
 import will.dev.smart_invite_v3.security.RateLimitingFilter;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import will.dev.smart_invite_v3.config.JwtProperties;
+import will.dev.smart_invite_v3.security.RestAuthenticationEntryPoint;
 
 
 @Configuration
@@ -26,6 +26,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RateLimitingFilter rateLimitingFilter;
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -69,6 +70,11 @@ public class SecurityConfig {
                         // Tout le reste nécessite un JWT
                         .anyRequest().authenticated()
                 )
+                .exceptionHandling(exception ->
+                        exception.authenticationEntryPoint(
+                                authenticationEntryPoint
+                        )
+                )
 
                 // Désactive le formulaire de login Spring
                 .formLogin(login -> login.disable())
@@ -83,17 +89,16 @@ public class SecurityConfig {
          *      ↓
          * JWT
          *      ↓
-         * Spring Security
+         * UsernamePasswordAuthenticationFilter (Spring Security)
          */
-
         http.addFilterBefore(
                 rateLimitingFilter,
                 UsernamePasswordAuthenticationFilter.class
         );
 
-        http.addFilterBefore(
+        http.addFilterAfter(
                 jwtAuthenticationFilter,
-                UsernamePasswordAuthenticationFilter.class
+                RateLimitingFilter.class
         );
 
         return http.build();

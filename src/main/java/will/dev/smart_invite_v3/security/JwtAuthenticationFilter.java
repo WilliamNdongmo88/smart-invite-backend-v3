@@ -28,12 +28,8 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-
     private final JwtService jwtService;
-
     private final CustomUserDetailsService userDetailsService;
-
-
 
     @Override
     protected void doFilterInternal(
@@ -53,7 +49,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         SecurityConstants.AUTHORIZATION_HEADER
                 );
 
-
         /*
          * Aucun token présent
          *
@@ -62,7 +57,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
          * GET /api/public/events
          *
          */
-
         if (
                 authHeader == null ||
                         !authHeader.startsWith(
@@ -140,31 +134,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
              */
 
             if (
-                    jwtService.isTokenValid(
-                            jwt,
-                            userDetails
-                    )
+                    jwtService.isAccessToken(jwt)
+                            &&
+                            jwtService.isTokenValid(
+                                    jwt,
+                                    userDetails
+                            )
 
             ) {
-
-
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
-
                                 userDetails,
-
                                 null,
-
                                 userDetails.getAuthorities()
-
                         );
-
-
 
                 /*
                  * Injection dans Spring Security Context
                  */
-
                 SecurityContextHolder
                         .getContext()
                         .setAuthentication(authentication);

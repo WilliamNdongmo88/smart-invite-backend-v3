@@ -41,13 +41,6 @@ public class User implements UserDetails{
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Manager du compte.
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "manager_id")
-    private User manager;
-
     @Column(nullable = false, length = 150)
     private String name;
 
@@ -99,11 +92,8 @@ public class User implements UserDetails{
 
     @PrePersist
     public void onCreate() {
-
         createdAt = LocalDateTime.now();
-
         updatedAt = LocalDateTime.now();
-
     }
 
     @PreUpdate

@@ -16,32 +16,18 @@ import will.dev.smart_invite_v3.dto.auth.response.RegisterResponse;
 
 public interface AuthService {
 
-    RegisterResponse register(
-            RegisterRequest request
-    );
+    RegisterResponse register(RegisterRequest request);
 
-    void verifyEmail(
-            VerifyEmailRequest request
-    );
+    void verifyEmail(VerifyEmailRequest request);
 
-    LoginResponse login(
-            LoginRequest request
-    );
+    LoginResponse login(LoginRequest request);
 
-    RefreshTokenResponse refresh(
-            RefreshTokenRequest request
-    );
+    RefreshTokenResponse refresh(RefreshTokenRequest request);
 
-    void logout(
-            LogoutRequest request
-    );
+    void logout(LogoutRequest request);
 
-    void forgotPassword(
-            ForgotPasswordRequest request
-    );
+    void forgotPassword(ForgotPasswordRequest request);
 
-    void resetPassword(
-            ResetPasswordRequest request
-    );
+    void resetPassword(ResetPasswordRequest request);
 
 }

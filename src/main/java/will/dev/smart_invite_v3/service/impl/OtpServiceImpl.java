@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import will.dev.smart_invite_v3.service.OtpService;
 import will.dev.smart_invite_v3.service.RedisService;
 
-
+import will.dev.smart_invite_v3.constants.RedisKeys;
 import java.security.SecureRandom;
 import java.time.Duration;
 
@@ -23,7 +23,7 @@ public class OtpServiceImpl implements OtpService {
 
     private static final Duration OTP_DURATION = Duration.ofMinutes(10);
 
-    private static final String OTP_PREFIX = "otp:";
+    private static final String OTP_PREFIX = RedisKeys.OTP;
 
     private final SecureRandom random = new SecureRandom();
 

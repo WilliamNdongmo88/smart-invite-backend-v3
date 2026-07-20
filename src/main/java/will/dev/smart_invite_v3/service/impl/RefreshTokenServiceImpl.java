@@ -6,11 +6,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-
 import will.dev.smart_invite_v3.service.RedisService;
 import will.dev.smart_invite_v3.service.RefreshTokenService;
 
-
+import will.dev.smart_invite_v3.constants.RedisKeys;
 import java.time.Duration;
 
 
@@ -20,8 +19,7 @@ import java.time.Duration;
 public class RefreshTokenServiceImpl implements RefreshTokenService {
 
     private final RedisService redisService;
-
-    private static final String PREFIX = "refresh:";
+    private static final String PREFIX = RedisKeys.REFRESH;
 
     @Value("${app.jwt.refresh-token-expiration}")
     private long refreshExpiration;
