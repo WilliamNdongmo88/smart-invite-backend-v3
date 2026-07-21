@@ -17,6 +17,10 @@ public final class CacheKeys {
         return "event:" + id;
     }
 
+    public static String eventStats(Long id) {
+        return "event:stats:" + id;
+    }
+
     public static String guests(Long eventId) {
         return "guests:event:" + eventId;
     }

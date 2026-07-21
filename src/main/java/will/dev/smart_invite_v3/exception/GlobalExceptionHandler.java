@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import will.dev.smart_invite_v3.dto.auth.response.ApiResponse;
+import will.dev.smart_invite_v3.exception.EventNotFoundException;
+import will.dev.smart_invite_v3.exception.EventAccessDeniedException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -178,6 +180,16 @@ public class GlobalExceptionHandler {
                         )
                 );
 
+    }
+
+    @ExceptionHandler(EventNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleEventNotFound(EventNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EventAccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleEventAccessDenied(EventAccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(ex.getMessage()));
     }
 
     /**

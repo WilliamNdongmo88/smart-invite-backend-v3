@@ -12,8 +12,6 @@ CREATE TABLE events (
 
     max_guests INTEGER,
 
-    has_plus_one BOOLEAN DEFAULT FALSE,
-
     religious_location TEXT,
     religious_time TIMESTAMP,
 
@@ -23,8 +21,7 @@ CREATE TABLE events (
     banquet_location TEXT,
     banquet_time TIMESTAMP,
 
-    event_name_concerned1 VARCHAR(150),
-    event_name_concerned2 VARCHAR(150),
+    concerned_names VARCHAR(150),
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
