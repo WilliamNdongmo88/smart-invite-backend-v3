@@ -46,7 +46,7 @@ public class PdfCardGeneratorService {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         PdfDocument pdf = new PdfDocument(new PdfWriter(out));
         Document doc   = new Document(pdf, PageSize.A4);
-        doc.setMargins(50, 60, 50, 60);
+        doc.setMargins(28, 50, 28, 50);
 
         DeviceRgb accent    = resolveColor(card != null ? card.getTitleColor()    : null, DEFAULT_ACCENT);
         DeviceRgb textColor = resolveColor(card != null ? card.getTextColor()     : null, DEFAULT_LIGHT);
@@ -61,114 +61,116 @@ public class PdfCardGeneratorService {
                 : baseUrl + "/images/logo_dark.png";
         try {
             doc.add(new Image(ImageDataFactory.create(logoSrc))
-                    .setWidth(120)
-                    .setHorizontalAlignment(HorizontalAlignment.CENTER));
+                    .setWidth(80)
+                    .setHorizontalAlignment(HorizontalAlignment.CENTER)
+                    .setMarginBottom(4));
         } catch (Exception ignored) {}
 
         // --- Titre ---
         String cardTitle = (card != null && card.getTitle() != null)
                 ? card.getTitle() : "LETTRE D'INVITATION";
-        doc.add(gap(12));
+        doc.add(gap(6));
         doc.add(new Paragraph(cardTitle)
-                .setFont(titleFont).setFontSize(18)
+                .setFont(titleFont).setFontSize(16)
                 .setFontColor(accent)
                 .setTextAlignment(TextAlignment.CENTER)
-                .setCharacterSpacing(3));
+                .setCharacterSpacing(2)
+                .setMarginBottom(2));
         doc.add(separator(accent));
 
         // --- Salutation ---
         doc.add(new Paragraph("Cher/Chère invité(e),")
-                .setFont(bodyFont).setFontSize(12)
-                .setFontColor(textColor).setMarginTop(14));
+                .setFont(bodyFont).setFontSize(11)
+                .setFontColor(textColor).setMarginTop(6).setMarginBottom(2));
 
         // --- Message principal ---
         String mainMsg = (card != null && card.getMainMessage() != null)
                 ? card.getMainMessage() : defaultMainMessage(event);
         doc.add(new Paragraph(mainMsg)
-                .setFont(bodyFont).setFontSize(11).setFontColor(textColor)
+                .setFont(bodyFont).setFontSize(10).setFontColor(textColor)
                 .setTextAlignment(TextAlignment.JUSTIFIED)
-                .setMarginTop(8).setMarginBottom(8));
+                .setMarginTop(2).setMarginBottom(2));
 
         if (card != null && card.getMainMessagePart1() != null) {
             doc.add(new Paragraph(card.getMainMessagePart1())
-                    .setFont(bodyFont).setFontSize(11).setFontColor(textColor)
-                    .setTextAlignment(TextAlignment.JUSTIFIED).setMarginBottom(4));
+                    .setFont(bodyFont).setFontSize(10).setFontColor(textColor)
+                    .setTextAlignment(TextAlignment.JUSTIFIED).setMarginBottom(2));
         }
         if (card != null && card.getMainMessagePart2() != null) {
             doc.add(new Paragraph(card.getMainMessagePart2())
-                    .setFont(bodyFont).setFontSize(11).setFontColor(textColor)
-                    .setTextAlignment(TextAlignment.JUSTIFIED).setMarginBottom(16));
+                    .setFont(bodyFont).setFontSize(10).setFontColor(textColor)
+                    .setTextAlignment(TextAlignment.JUSTIFIED).setMarginBottom(4));
         }
 
         // --- Programme ---
         doc.add(new Paragraph("PROGRAMME")
-                .setFont(labelFont).setFontSize(13).setFontColor(accent)
-                .setCharacterSpacing(2).setTextAlignment(TextAlignment.CENTER));
+                .setFont(labelFont).setFontSize(12).setFontColor(accent)
+                .setCharacterSpacing(2).setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(4).setMarginBottom(2));
         doc.add(separator(accent));
         addProgramme(doc, event, bodyFont, labelFont, accent, textColor);
 
         // --- Thème & couleurs ---
         if (card != null && card.getEventTheme() != null) {
-            doc.add(gap(16));
+            doc.add(gap(6));
             doc.add(new Paragraph("THÈME DE LA SOIRÉE : " + card.getEventTheme().toUpperCase())
-                    .setFont(labelFont).setFontSize(11).setFontColor(accent)
-                    .setTextAlignment(TextAlignment.CENTER));
+                    .setFont(labelFont).setFontSize(10).setFontColor(accent)
+                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
         }
         if (card != null && card.getPriorityColors() != null) {
             doc.add(new Paragraph("Couleurs priorisées")
-                    .setFont(bodyFont).setFontSize(10).setFontColor(DEFAULT_MUTED)
-                    .setTextAlignment(TextAlignment.CENTER));
+                    .setFont(bodyFont).setFontSize(9).setFontColor(DEFAULT_MUTED)
+                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
             doc.add(new Paragraph(card.getPriorityColors())
-                    .setFont(labelFont).setFontSize(11).setFontColor(textColor)
-                    .setTextAlignment(TextAlignment.CENTER));
+                    .setFont(labelFont).setFontSize(10).setFontColor(textColor)
+                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
         }
 
         // --- QR instructions ---
-        doc.add(gap(20));
+        doc.add(gap(6));
         String qrMsg = (card != null && card.getQrInstructions() != null)
                 ? card.getQrInstructions()
                 : "Prière de vous présenter avec votre code QR afin de faciliter votre accueil.";
         doc.add(new Paragraph(qrMsg)
-                .setFont(bodyFont).setFontSize(10).setFontColor(DEFAULT_MUTED)
-                .setTextAlignment(TextAlignment.CENTER).setItalic());
+                .setFont(bodyFont).setFontSize(9).setFontColor(DEFAULT_MUTED)
+                .setTextAlignment(TextAlignment.CENTER).setItalic().setMarginBottom(1));
 
         // --- Dress code ---
         if (card != null && card.getDressCodeMessage() != null) {
             doc.add(new Paragraph(card.getDressCodeMessage())
-                    .setFont(bodyFont).setFontSize(10).setFontColor(DEFAULT_MUTED)
-                    .setTextAlignment(TextAlignment.CENTER).setItalic());
+                    .setFont(bodyFont).setFontSize(9).setFontColor(DEFAULT_MUTED)
+                    .setTextAlignment(TextAlignment.CENTER).setItalic().setMarginBottom(1));
         }
 
         // --- Sous-message de confirmation ---
         if (card != null && card.getSousMainMessage() != null) {
-            doc.add(gap(10));
             doc.add(new Paragraph(card.getSousMainMessage())
-                    .setFont(bodyFont).setFontSize(10).setFontColor(DEFAULT_MUTED)
-                    .setTextAlignment(TextAlignment.CENTER).setItalic());
+                    .setFont(bodyFont).setFontSize(9).setFontColor(DEFAULT_MUTED)
+                    .setTextAlignment(TextAlignment.CENTER).setItalic().setMarginBottom(1));
         }
 
         // --- Message de remerciement ---
-        doc.add(gap(16));
+        doc.add(gap(6));
         String thanks = (card != null && card.getThanksMessage1() != null)
                 ? card.getThanksMessage1()
                 : "Merci pour votre compréhension et votre présence à nos côtés.";
         doc.add(new Paragraph(thanks)
-                .setFont(bodyFont).setFontSize(11).setFontColor(textColor)
-                .setTextAlignment(TextAlignment.CENTER));
+                .setFont(bodyFont).setFontSize(10).setFontColor(textColor)
+                .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
 
         // --- Message de clôture ---
         String closing = (card != null && card.getClosingMessage() != null)
                 ? card.getClosingMessage()
                 : "Votre présence illuminera ce jour si spécial pour nous.";
         doc.add(new Paragraph(closing)
-                .setFont(bodyFont).setFontSize(11).setFontColor(textColor)
-                .setTextAlignment(TextAlignment.CENTER));
+                .setFont(bodyFont).setFontSize(10).setFontColor(textColor)
+                .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
 
         // --- Signature ---
         if (event.getConcernedNames() != null) {
-            doc.add(gap(20));
+            doc.add(gap(8));
             doc.add(new Paragraph(event.getConcernedNames())
-                    .setFont(titleFont).setFontSize(14).setFontColor(accent)
+                    .setFont(titleFont).setFontSize(13).setFontColor(accent)
                     .setTextAlignment(TextAlignment.CENTER));
         }
 
@@ -229,17 +231,23 @@ public class PdfCardGeneratorService {
                               LocalDateTime dateTime, String location, String note,
                               PdfFont body, PdfFont label,
                               DeviceRgb accent, DeviceRgb text) {
-        if (dateTime == null && location == null) return;
-        doc.add(gap(12));
-        String header = ceremonyTitle + (dateTime != null ? " le " + dateTime.format(DATE_FMT) : "");
-        doc.add(new Paragraph(header).setFont(label).setFontSize(11).setFontColor(accent));
-        if (location != null) {
+        // N'affiche la cérémonie que si au moins une donnée est présente
+        boolean hasDate     = dateTime != null;
+        boolean hasLocation = location != null && !location.isBlank();
+        if (!hasDate && !hasLocation) return;
+
+        doc.add(gap(5));
+        String header = ceremonyTitle + (hasDate ? " le " + dateTime.format(DATE_FMT) : "");
+        doc.add(new Paragraph(header)
+                .setFont(label).setFontSize(10).setFontColor(accent).setMarginBottom(1));
+        if (hasLocation) {
             doc.add(new Paragraph("  \u25CF " + location)
-                    .setFont(body).setFontSize(11).setFontColor(text));
+                    .setFont(body).setFontSize(10).setFontColor(text).setMarginBottom(1));
         }
         if (note != null) {
             doc.add(new Paragraph(note)
-                    .setFont(body).setFontSize(10).setFontColor(DEFAULT_MUTED).setItalic());
+                    .setFont(body).setFontSize(9).setFontColor(DEFAULT_MUTED)
+                    .setItalic().setMarginBottom(1));
         }
     }
 
