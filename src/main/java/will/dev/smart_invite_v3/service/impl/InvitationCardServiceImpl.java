@@ -19,13 +19,13 @@ import will.dev.smart_invite_v3.exception.UserNotFoundException;
 import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.InvitationCardRepository;
 import will.dev.smart_invite_v3.repository.UserRepository;
+import will.dev.smart_invite_v3.service.FirebaseStorageService;
 import will.dev.smart_invite_v3.service.InvitationCardService;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +36,10 @@ public class InvitationCardServiceImpl implements InvitationCardService {
     private final InvitationCardRepository cardRepository;
     private final UserRepository           userRepository;
     private final PdfCardGeneratorService  pdfGenerator;
+    private final FirebaseStorageService   firebaseStorage;
+
+    @Value("${spring.profiles.active}")
+    private String path;
 
     @Value("${app.upload.dir:uploads/cards}")
     private String uploadDir;
@@ -134,24 +138,17 @@ public class InvitationCardServiceImpl implements InvitationCardService {
             throw new IllegalArgumentException("Seuls les fichiers PDF sont acceptés");
         }
 
-        try {
-            Path dir  = Paths.get(uploadDir, String.valueOf(eventId));
-            Files.createDirectories(dir);
-            Path dest = dir.resolve(UUID.randomUUID() + ".pdf");
-            file.transferTo(dest);
+        String pdfUrl = firebaseStorage.upload(file, path + "/pdfs");
 
-            InvitationCard card = cardRepository.findByEventId(eventId)
-                    .orElseGet(() -> InvitationCard.builder().event(event).build());
-            card.setPdfUrl(dest.toString());
-            card.setHasInvitationModelCard(true);
+        InvitationCard card = cardRepository.findByEventId(eventId)
+                .orElseGet(() -> InvitationCard.builder().event(event).build());
+        card.setPdfUrl(pdfUrl);
+        card.setHasInvitationModelCard(true);
 
-            event.setImportMyModelCard(true);
-            eventRepository.save(event);
+        event.setImportMyModelCard(true);
+        eventRepository.save(event);
 
-            return CardResponse.from(cardRepository.save(card), eventId);
-        } catch (IOException e) {
-            throw new RuntimeException("Erreur lors de l'upload du modèle", e);
-        }
+        return CardResponse.from(cardRepository.save(card), eventId);
     }
 
     // ---- Helpers ----

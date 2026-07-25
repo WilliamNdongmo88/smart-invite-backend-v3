@@ -35,7 +35,7 @@ import java.util.Set;
 public class PaymentServiceImpl implements PaymentService {
 
     @Value("${spring.profiles.active}")
-    private String patch;
+    private String path;
 
     private static final BigDecimal UNIT_PRICE = BigDecimal.valueOf(52);
     private static final Set<String> ALLOWED_TYPES =
@@ -111,12 +111,7 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         // Upload sur Firebase Storage dans le dossier "dev ou prod" selon l'environnement
-        String proofUrl = "";
-        if(patch.equals("prod") ) {
-            proofUrl = firebaseStorage.upload(file, "prod/payment");
-        }else {
-            proofUrl = firebaseStorage.upload(file, "dev/payment");
-        }
+        String proofUrl = firebaseStorage.upload(file, path + "/payment");
 
         payment.setProofUrl(proofUrl);
         payment.setStatus(PaymentStatus.UNDER_REVIEW);
