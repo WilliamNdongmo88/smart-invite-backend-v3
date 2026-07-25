@@ -94,6 +94,21 @@ public class BrevoEmailServiceImpl implements EmailService {
         sendEmail(organizerEmail, "Résultat de votre paiement — " + eventTitle, html);
     }
 
+    @Override
+    public void sendInvitationEmail(String toEmail, String guestName, String eventTitle,
+                                     String qrCodeUrl, String pdfUrl) {
+        String html = emailTemplateService.render(Map.of(
+                "subject",  "Votre invitation — " + eventTitle,
+                "title",    "Votre invitation",
+                "content",  "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/>" +
+                            "Vous êtes cordialement invité(e) à <strong>" + eventTitle + "</strong>.<br/>" +
+                            "Votre QR Code est disponible ci-dessous. Présentez-le à l'entrée.",
+                "ctaUrl",   pdfUrl != null ? pdfUrl : qrCodeUrl,
+                "ctaLabel", "Voir mon invitation"
+        ));
+        sendEmail(toEmail, "Votre invitation — " + eventTitle, html);
+    }
+
     private void sendEmail(String to, String subject, String htmlContent) {
         try {
             TransactionalEmailsApi api = new TransactionalEmailsApi(apiClient);

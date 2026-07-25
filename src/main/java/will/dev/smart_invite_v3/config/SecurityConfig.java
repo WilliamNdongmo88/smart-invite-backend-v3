@@ -67,6 +67,10 @@ public class SecurityConfig {
                         // OPTIONS (Angular)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
+                        // Invitations publiques (sans auth)
+                        .requestMatchers(HttpMethod.GET,  "/api/invitations/*").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/invitations/*/rsvp").permitAll()
+
                         // Tout le reste nécessite un JWT
                         .anyRequest().authenticated()
                 )

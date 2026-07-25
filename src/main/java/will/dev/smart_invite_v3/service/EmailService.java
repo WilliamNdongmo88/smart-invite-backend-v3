@@ -13,4 +13,7 @@ public interface EmailService {
 
     void sendPaymentReviewNotification(String organizerEmail, String organizerName,
                                        String eventTitle, boolean approved, String rejectionReason);
+
+    void sendInvitationEmail(String toEmail, String guestName, String eventTitle,
+                             String qrCodeUrl, String pdfUrl);
 }

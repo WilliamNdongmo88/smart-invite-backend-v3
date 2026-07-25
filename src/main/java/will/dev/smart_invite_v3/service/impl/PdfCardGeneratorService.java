@@ -15,11 +15,14 @@ import com.itextpdf.layout.element.LineSeparator;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.properties.HorizontalAlignment;
 import com.itextpdf.layout.properties.TextAlignment;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import will.dev.smart_invite_v3.entity.Event;
 import will.dev.smart_invite_v3.entity.InvitationCard;
+import will.dev.smart_invite_v3.service.FirebaseStorageService;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -27,12 +30,31 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PdfCardGeneratorService {
 
+    private final FirebaseStorageService firebaseStorage;
+
+    @Value("${spring.profiles.active:dev}")
+    private String activeProfile;
+
     @Value("${app.base.url}")
     private String baseUrl;
+
+    private byte[] logoBytes;
+
+    @PostConstruct
+    void loadLogo() {
+        try {
+            logoBytes = firebaseStorage.downloadBytes(activeProfile + "/logos/logo.png");
+            if (logoBytes != null) log.info("Logo chargé depuis Firebase ({} bytes)", logoBytes.length);
+            else log.warn("Logo introuvable sur Firebase : {}/logos/logo.png", activeProfile);
+        } catch (Exception e) {
+            log.warn("Impossible de charger le logo Firebase : {}", e.getMessage());
+        }
+    }
 
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("EEEE d MMMM yyyy 'à' HH:mm", Locale.FRENCH);
@@ -56,14 +78,14 @@ public class PdfCardGeneratorService {
         PdfFont labelFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
 
         // --- Logo ---
-        String logoSrc = (card != null && card.getLogoUrl() != null)
-                ? card.getLogoUrl()
-                : baseUrl + "/images/logo_dark.png";
         try {
-            doc.add(new Image(ImageDataFactory.create(logoSrc))
-                    .setWidth(80)
-                    .setHorizontalAlignment(HorizontalAlignment.CENTER)
-                    .setMarginBottom(4));
+            if (logoBytes != null) {
+                doc.add(new Image(ImageDataFactory.create(logoBytes))
+                        .setWidth(80).setHorizontalAlignment(HorizontalAlignment.CENTER).setMarginBottom(4));
+            } else if (card != null && card.getLogoUrl() != null) {
+                doc.add(new Image(ImageDataFactory.create(card.getLogoUrl()))
+                        .setWidth(80).setHorizontalAlignment(HorizontalAlignment.CENTER).setMarginBottom(4));
+            }
         } catch (Exception ignored) {}
 
         // --- Titre ---
