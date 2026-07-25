@@ -1,8 +1,8 @@
 INSERT INTO users (name, email, password, role, is_active, is_blocked, created_at, updated_at)
 VALUES (
-    'Admin',
-    'admin@gmail.com',
-    '$2a$10$THaIViY1L7jqQMyR7aJonelWvqk4nJHShrwah51D9g.vHpkLf2Sjq',
+    'williamndongmo',
+    'williamndongmo899@gmail.com',
+    '$2a$12$eGe7EIZWElhYbQJgDLtB5OvGdAI2L0Pqjryw559n.V7nHXEcsYZdK',
     'ADMIN',
     TRUE,
     FALSE,

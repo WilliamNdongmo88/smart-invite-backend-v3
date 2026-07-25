@@ -12,6 +12,7 @@ import sibModel.SendSmtpEmailSender;
 import sibModel.SendSmtpEmailTo;
 import will.dev.smart_invite_v3.service.EmailService;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Map;
 
@@ -28,6 +29,9 @@ public class BrevoEmailServiceImpl implements EmailService {
 
     @Value("${app.brevo.sender-email}")
     private String senderEmail;
+
+    @Value("${app.admin.email}")
+    private String adminEmail;
 
     @Override
     public void sendOtpEmail(String to, String otp) {
@@ -56,6 +60,38 @@ public class BrevoEmailServiceImpl implements EmailService {
         ));
 
         sendEmail(to, "Réinitialisation de votre mot de passe", html);
+    }
+
+    @Override
+    public void sendPaymentProofNotification(String organizerName, String eventTitle,
+                                              int quota, BigDecimal amount, String proofUrl) {
+        String html = emailTemplateService.render(Map.of(
+                "subject",  "Nouvelle preuve de paiement à valider",
+                "title",    "Preuve de paiement reçue",
+                "content",  "L'organisateur <strong style=\"color:#c9a84c;\">" + organizerName + "</strong>" +
+                            " a soumis une preuve de paiement pour l'événement <strong>" + eventTitle + "</strong>.<br/>" +
+                            "Quota demandé : <strong>" + quota + " invités</strong><br/>" +
+                            "Montant : <strong>" + amount + " XAF</strong>",
+                "ctaUrl",   proofUrl,
+                "ctaLabel", "Voir la preuve"
+        ));
+        sendEmail(adminEmail, "Nouvelle preuve de paiement à valider — " + eventTitle, html);
+    }
+
+    @Override
+    public void sendPaymentReviewNotification(String organizerEmail, String organizerName,
+                                               String eventTitle, boolean approved, String rejectionReason) {
+        String status = approved ? "approuvé ✅" : "rejeté ❌";
+        String content = "Votre paiement pour l'événement <strong>" + eventTitle + "</strong> a été <strong>" + status + "</strong>.";
+        if (!approved && rejectionReason != null && !rejectionReason.isBlank()) {
+            content += "<br/>Motif : <em>" + rejectionReason + "</em>";
+        }
+        String html = emailTemplateService.render(Map.of(
+                "subject", "Résultat de votre paiement — " + eventTitle,
+                "title",   "Paiement " + status,
+                "content", content
+        ));
+        sendEmail(organizerEmail, "Résultat de votre paiement — " + eventTitle, html);
     }
 
     private void sendEmail(String to, String subject, String htmlContent) {

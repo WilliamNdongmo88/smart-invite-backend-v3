@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import will.dev.smart_invite_v3.dto.auth.response.ApiResponse;
 import will.dev.smart_invite_v3.exception.EventNotFoundException;
+import will.dev.smart_invite_v3.exception.PaymentException;
 import will.dev.smart_invite_v3.exception.EventAccessDeniedException;
 
 import java.util.HashMap;
@@ -180,6 +181,11 @@ public class GlobalExceptionHandler {
                         )
                 );
 
+    }
+
+    @ExceptionHandler(PaymentException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePaymentException(PaymentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(EventNotFoundException.class)
