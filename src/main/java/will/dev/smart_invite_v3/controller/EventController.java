@@ -6,16 +6,17 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import will.dev.smart_invite_v3.dto.auth.response.ApiResponse;
-import will.dev.smart_invite_v3.dto.event.request.CreateEventRequest;
-import will.dev.smart_invite_v3.dto.event.request.UpdateEventRequest;
-import will.dev.smart_invite_v3.dto.event.response.EventResponse;
-import will.dev.smart_invite_v3.dto.event.response.EventStatsResponse;
+import will.dev.smart_invite_v3.dto.event.request.*;
+import will.dev.smart_invite_v3.dto.event.response.*;
 import will.dev.smart_invite_v3.security.CustomUserDetails;
 import will.dev.smart_invite_v3.service.EventService;
+import will.dev.smart_invite_v3.service.InvitationCardService;
 
 import java.util.List;
 
@@ -26,7 +27,10 @@ import java.util.List;
 @SecurityRequirement(name = "bearerAuth")
 public class EventController {
 
-    private final EventService eventService;
+    private final EventService          eventService;
+    private final InvitationCardService cardService;
+
+    // ---- CRUD Événements ----
 
     @PostMapping
     @Operation(summary = "Créer un événement")
@@ -34,10 +38,20 @@ public class EventController {
             @Valid @RequestBody CreateEventRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        EventResponse response = eventService.create(request, userDetails.getUser().getId());
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(response, "Événement créé avec succès"));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(
+                eventService.create(request, userDetails.getUser().getId()),
+                "Événement créé avec succès"));
+    }
+
+    @PostMapping("/with-card")
+    @Operation(summary = "Créer un événement avec sa carte d'invitation simultanément")
+    public ResponseEntity<ApiResponse<EventWithCardResponse>> createWithCard(
+            @Valid @RequestBody CreateEventWithCardRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(
+                cardService.createWithCard(request, userDetails.getUser().getId()),
+                "Événement et carte créés avec succès"));
     }
 
     @GetMapping
@@ -45,8 +59,9 @@ public class EventController {
     public ResponseEntity<ApiResponse<List<EventResponse>>> findAll(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        List<EventResponse> events = eventService.findAllByOrganizer(userDetails.getUser().getId());
-        return ResponseEntity.ok(ApiResponse.success(events, "Événements récupérés"));
+        return ResponseEntity.ok(ApiResponse.success(
+                eventService.findAllByOrganizer(userDetails.getUser().getId()),
+                "Événements récupérés"));
     }
 
     @GetMapping("/{id}")
@@ -55,8 +70,9 @@ public class EventController {
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        EventResponse response = eventService.findById(id, userDetails.getUser().getId());
-        return ResponseEntity.ok(ApiResponse.success(response, "Événement récupéré"));
+        return ResponseEntity.ok(ApiResponse.success(
+                eventService.findById(id, userDetails.getUser().getId()),
+                "Événement récupéré"));
     }
 
     @PutMapping("/{id}")
@@ -66,8 +82,9 @@ public class EventController {
             @Valid @RequestBody UpdateEventRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        EventResponse response = eventService.update(id, request, userDetails.getUser().getId());
-        return ResponseEntity.ok(ApiResponse.success(response, "Événement mis à jour"));
+        return ResponseEntity.ok(ApiResponse.success(
+                eventService.update(id, request, userDetails.getUser().getId()),
+                "Événement mis à jour"));
     }
 
     @DeleteMapping("/{id}")
@@ -86,7 +103,58 @@ public class EventController {
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        EventStatsResponse stats = eventService.getStats(id, userDetails.getUser().getId());
-        return ResponseEntity.ok(ApiResponse.success(stats, "Statistiques récupérées"));
+        return ResponseEntity.ok(ApiResponse.success(
+                eventService.getStats(id, userDetails.getUser().getId()),
+                "Statistiques récupérées"));
+    }
+
+    // ---- Carte d'invitation ----
+
+    @GetMapping("/{id}/card")
+    @Operation(summary = "Récupérer la carte d'invitation")
+    public ResponseEntity<ApiResponse<CardResponse>> getCard(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                cardService.getCard(id, userDetails.getUser().getId()),
+                "Carte récupérée"));
+    }
+
+    @PutMapping(value = "/{id}/card", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Créer ou mettre à jour la carte d'invitation")
+    public ResponseEntity<ApiResponse<CardResponse>> saveCard(
+            @PathVariable Long id,
+            @RequestBody InvitationNoteRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                cardService.saveOrUpdate(id, request, userDetails.getUser().getId()),
+                "Carte sauvegardée"));
+    }
+
+    @GetMapping(value = "/{id}/card/download", produces = MediaType.APPLICATION_PDF_VALUE)
+    @Operation(summary = "Télécharger la carte d'invitation en PDF")
+    public ResponseEntity<byte[]> downloadCard(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        byte[] pdf = cardService.generatePdf(id, userDetails.getUser().getId());
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=invitation-" + id + ".pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    @PostMapping(value = "/{id}/card/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Importer un modèle de carte PDF personnalisé")
+    public ResponseEntity<ApiResponse<CardResponse>> uploadCustomCard(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                cardService.uploadCustomModel(id, file, userDetails.getUser().getId()),
+                "Modèle importé avec succès"));
     }
 }

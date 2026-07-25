@@ -6,11 +6,19 @@ CREATE TABLE events (
 
     title VARCHAR(255) NOT NULL,
 
+    description TEXT,
+
     type VARCHAR(50),
 
-    status VARCHAR(30),
+    status VARCHAR(30) DEFAULT 'PLANNED',
+
+    budget VARCHAR(100),
 
     max_guests INTEGER,
+
+    concerned_names VARCHAR(150),
+
+    event_date TIMESTAMP,
 
     religious_location TEXT,
     religious_time TIMESTAMP,
@@ -21,7 +29,9 @@ CREATE TABLE events (
     banquet_location TEXT,
     banquet_time TIMESTAMP,
 
-    concerned_names VARCHAR(150),
+    show_wedding_religious_location BOOLEAN DEFAULT FALSE,
+
+    is_model_card BOOLEAN DEFAULT FALSE,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

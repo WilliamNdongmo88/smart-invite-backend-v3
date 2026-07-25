@@ -41,15 +41,20 @@ public class EventServiceImpl implements EventService {
 
         Event event = Event.builder()
                 .title(request.title())
+                .description(request.description())
                 .type(request.type())
+                .budget(request.budget())
                 .maxGuests(request.maxGuests())
                 .concernedNames(request.concernedNames())
+                .eventDate(request.eventDate())
                 .religiousLocation(request.religiousLocation())
                 .religiousDateTime(request.religiousDateTime())
                 .civilLocation(request.civilLocation())
                 .civilDateTime(request.civilDateTime())
                 .banquetLocation(request.banquetLocation())
                 .banquetDateTime(request.banquetDateTime())
+                .showWeddingReligiousLocation(Boolean.TRUE.equals(request.showWeddingReligiousLocation()))
+                .importMyModelCard(Boolean.TRUE.equals(request.importMyModelCard()))
                 .organizer(organizer)
                 .build();
 
@@ -80,19 +85,23 @@ public class EventServiceImpl implements EventService {
         Event event = resolveOwned(id, organizerId);
 
         event.setTitle(request.title());
+        event.setDescription(request.description());
         event.setType(request.type());
         event.setStatus(request.status());
+        event.setBudget(request.budget());
         event.setMaxGuests(request.maxGuests());
         event.setConcernedNames(request.concernedNames());
+        event.setEventDate(request.eventDate());
         event.setReligiousLocation(request.religiousLocation());
         event.setReligiousDateTime(request.religiousDateTime());
         event.setCivilLocation(request.civilLocation());
         event.setCivilDateTime(request.civilDateTime());
         event.setBanquetLocation(request.banquetLocation());
         event.setBanquetDateTime(request.banquetDateTime());
+        event.setShowWeddingReligiousLocation(Boolean.TRUE.equals(request.showWeddingReligiousLocation()));
+        event.setImportMyModelCard(Boolean.TRUE.equals(request.importMyModelCard()));
 
         redisService.delete(CacheKeys.eventStats(id));
-
         return EventResponse.from(eventRepository.save(event));
     }
 
@@ -110,25 +119,11 @@ public class EventServiceImpl implements EventService {
     @Override
     public EventStatsResponse getStats(Long id, Long organizerId) {
         Event event = resolveOwned(id, organizerId);
-
-        long totalGuests = 0;
-        long confirmed   = 0;
-        long pending     = 0;
-        long declined    = 0;
+        long totalGuests = 0, confirmed = 0, pending = 0, declined = 0;
         double occupancyRate = event.getMaxGuests() > 0
-                ? (double) totalGuests / event.getMaxGuests() * 100
-                : 0;
-
-        return new EventStatsResponse(
-                event.getId(),
-                event.getTitle(),
-                event.getMaxGuests(),
-                totalGuests,
-                confirmed,
-                pending,
-                declined,
-                occupancyRate
-        );
+                ? (double) totalGuests / event.getMaxGuests() * 100 : 0;
+        return new EventStatsResponse(event.getId(), event.getTitle(),
+                event.getMaxGuests(), totalGuests, confirmed, pending, declined, occupancyRate);
     }
 
     private Event resolveOwned(Long eventId, Long organizerId) {

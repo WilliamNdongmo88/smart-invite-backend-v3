@@ -12,15 +12,20 @@ public record CreateEventRequest(
         @NotBlank(message = "Le titre est obligatoire")
         String title,
 
+        String description,
+
         @NotNull(message = "Le type d'événement est obligatoire")
         EventType type,
+
+        String budget,
 
         @NotNull(message = "Le nombre maximum d'invités est obligatoire")
         @Min(value = 1, message = "Le nombre d'invités doit être au moins 1")
         Integer maxGuests,
 
-        // Optionnels
         String concernedNames,
+
+        LocalDateTime eventDate,
 
         String religiousLocation,
         LocalDateTime religiousDateTime,
@@ -29,5 +34,9 @@ public record CreateEventRequest(
         LocalDateTime civilDateTime,
 
         String banquetLocation,
-        LocalDateTime banquetDateTime
+        LocalDateTime banquetDateTime,
+
+        Boolean showWeddingReligiousLocation,
+
+        Boolean importMyModelCard
 ) {}

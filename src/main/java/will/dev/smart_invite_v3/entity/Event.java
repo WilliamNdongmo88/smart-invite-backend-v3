@@ -26,8 +26,11 @@ public class Event {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 200)
+    @Column(nullable = false, length = 255)
     private String title;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -38,37 +41,50 @@ public class Event {
     @Column(nullable = false)
     private EventStatus status = EventStatus.PLANNED;
 
+    @Column(length = 100)
+    private String budget;
+
     @Column(name = "max_guests", nullable = false)
     private Integer maxGuests;
 
-    // Noms des concernés (ex: "Marie & Jean")
-    @Column(name = "concerned_names", length = 300)
+    @Column(name = "concerned_names", length = 150)
     private String concernedNames;
 
-    // --- Cérémonie religieuse ---
-    @Column(name = "religious_location", length = 300)
+    @Column(name = "event_date")
+    private LocalDateTime eventDate;
+
+    @Column(name = "religious_location", columnDefinition = "TEXT")
     private String religiousLocation;
 
     @Column(name = "religious_time")
     private LocalDateTime religiousDateTime;
 
-    // --- Cérémonie civile ---
-    @Column(name = "civil_location", length = 300)
+    @Column(name = "civil_location", columnDefinition = "TEXT")
     private String civilLocation;
 
-    @Column(name="civil_time")
+    @Column(name = "civil_time")
     private LocalDateTime civilDateTime;
 
-    // --- Banquet / Réception ---
-    @Column(name = "banquet_location", length = 300)
+    @Column(name = "banquet_location", columnDefinition = "TEXT")
     private String banquetLocation;
 
     @Column(name = "banquet_time")
     private LocalDateTime banquetDateTime;
 
+    @Builder.Default
+    @Column(name = "show_wedding_religious_location")
+    private Boolean showWeddingReligiousLocation = false;
+
+    @Builder.Default
+    @Column(name = "is_model_card", nullable = false)
+    private Boolean importMyModelCard = false;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "organizer_id", nullable = false)
     private User organizer;
+
+    @OneToOne(mappedBy = "event", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private InvitationCard invitationCard;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
