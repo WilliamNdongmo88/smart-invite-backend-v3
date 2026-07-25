@@ -71,6 +71,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,  "/api/invitations/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/invitations/*/rsvp").permitAll()
 
+                        // Liens d'auto-inscription publics (sans auth)
+                        .requestMatchers(HttpMethod.POST, "/api/link/join/*").permitAll()
+
                         // Tout le reste nécessite un JWT
                         .anyRequest().authenticated()
                 )
