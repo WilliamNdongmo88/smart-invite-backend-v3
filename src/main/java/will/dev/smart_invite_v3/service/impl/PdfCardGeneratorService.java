@@ -64,7 +64,7 @@ public class PdfCardGeneratorService {
     private static final DeviceRgb DEFAULT_LIGHT  = new DeviceRgb(230, 230, 230);
     private static final DeviceRgb DEFAULT_MUTED  = new DeviceRgb(150, 150, 150);
 
-    public byte[] generate(Event event, InvitationCard card) throws IOException {
+    public byte[] generate(Event event, InvitationCard card, byte[] qrCodeBytes, String guestName) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         PdfDocument pdf = new PdfDocument(new PdfWriter(out));
         Document doc   = new Document(pdf, PageSize.A4);
@@ -101,7 +101,10 @@ public class PdfCardGeneratorService {
         doc.add(separator(accent));
 
         // --- Salutation ---
-        doc.add(new Paragraph("Cher/Chère invité(e),")
+        String salutation = guestName != null && !guestName.isBlank()
+                ? "Cher/Chère " + guestName + ","
+                : "Cher/Chère invité(e),";
+        doc.add(new Paragraph(salutation)
                 .setFont(bodyFont).setFontSize(11)
                 .setFontColor(textColor).setMarginTop(6).setMarginBottom(2));
 
@@ -130,7 +133,7 @@ public class PdfCardGeneratorService {
                 .setCharacterSpacing(2).setTextAlignment(TextAlignment.CENTER)
                 .setMarginTop(4).setMarginBottom(2));
         doc.add(separator(accent));
-        addProgramme(doc, event, bodyFont, labelFont, accent, textColor);
+        addProgramme(doc, event, card, bodyFont, labelFont, accent, textColor);
 
         // --- Thème & couleurs ---
         if (card != null && card.getEventTheme() != null) {
@@ -139,13 +142,12 @@ public class PdfCardGeneratorService {
                     .setFont(labelFont).setFontSize(10).setFontColor(accent)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
         }
-        if (card != null && card.getPriorityColors() != null) {
-            doc.add(new Paragraph("Couleurs priorisées")
-                    .setFont(bodyFont).setFontSize(9).setFontColor(DEFAULT_MUTED)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
-            doc.add(new Paragraph(card.getPriorityColors())
-                    .setFont(labelFont).setFontSize(10).setFontColor(textColor)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
+
+        // --- QR Code ---
+        if (qrCodeBytes != null) {
+            doc.add(gap(6));
+            doc.add(new Image(ImageDataFactory.create(qrCodeBytes))
+                    .setWidth(90).setHorizontalAlignment(HorizontalAlignment.CENTER));
         }
 
         // --- QR instructions ---
@@ -202,14 +204,14 @@ public class PdfCardGeneratorService {
 
     // ---- Programme dynamique par type ----
 
-    private void addProgramme(Document doc, Event event,
+    private void addProgramme(Document doc, Event event, InvitationCard card,
                                PdfFont body, PdfFont label,
                                DeviceRgb accent, DeviceRgb text) {
         switch (event.getType()) {
             case MARIAGE -> {
                 addCeremony(doc, "MARIAGE CIVIL",
                         event.getCivilDateTime(), event.getCivilLocation(),
-                        "Mini réception à la sortie de la mairie directement après la célébration de l'union par Mr le Maire.",
+                        card != null ? card.getCivilNote() : null,
                         body, label, accent, text);
                 addCeremony(doc, "CÉRÉMONIE RELIGIEUSE",
                         event.getReligiousDateTime(), event.getReligiousLocation(),

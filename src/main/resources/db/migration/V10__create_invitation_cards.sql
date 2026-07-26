@@ -8,6 +8,8 @@ CREATE TABLE invitation_cards (
 
     main_message TEXT,
 
+    civil_note TEXT,
+
     main_message_part1 TEXT,
 
     main_message_part2 TEXT,
@@ -15,8 +17,6 @@ CREATE TABLE invitation_cards (
     sous_main_message TEXT,
 
     event_theme VARCHAR(200),
-
-    priority_colors VARCHAR(300),
 
     qr_instructions TEXT,
 

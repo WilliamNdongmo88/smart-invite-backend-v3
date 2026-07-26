@@ -77,6 +77,17 @@ public class FirebaseStorageServiceImpl implements FirebaseStorageService {
         return blob.getContent();
     }
 
+    @Override
+    public void delete(String path) {
+        try {
+            Storage storage = StorageClient.getInstance().bucket().getStorage();
+            storage.delete(BlobId.of(storageBucket, path));
+            log.info("Fichier supprimé de Firebase : {}", path);
+        } catch (Exception e) {
+            log.warn("Erreur suppression Firebase {} : {}", path, e.getMessage());
+        }
+    }
+
     private String getExtension(String filename) {
         if (filename == null || !filename.contains(".")) return "";
         return filename.substring(filename.lastIndexOf("."));

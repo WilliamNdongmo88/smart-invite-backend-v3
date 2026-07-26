@@ -6,4 +6,5 @@ public interface FirebaseStorageService {
     String upload(MultipartFile file, String folder);
     String uploadBytes(byte[] bytes, String folder, String filename, String contentType);
     byte[] downloadBytes(String path);
+    void delete(String path);
 }

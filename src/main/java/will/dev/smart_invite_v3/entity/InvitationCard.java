@@ -38,9 +38,6 @@ public class InvitationCard {
     @Column(name = "event_theme", length = 200)
     private String eventTheme;
 
-    @Column(name = "priority_colors", length = 300)
-    private String priorityColors;
-
     @Column(name = "qr_instructions", columnDefinition = "TEXT")
     private String qrInstructions;
 
@@ -52,6 +49,9 @@ public class InvitationCard {
 
     @Column(name = "closing_message", columnDefinition = "TEXT")
     private String closingMessage;
+
+    @Column(name = "civil_note", columnDefinition = "TEXT")
+    private String civilNote;
 
     @Column(name = "title_color", length = 20)
     private String titleColor;

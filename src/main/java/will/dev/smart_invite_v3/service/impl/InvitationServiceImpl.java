@@ -1,6 +1,5 @@
 package will.dev.smart_invite_v3.service.impl;
 
-import com.google.zxing.WriterException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,8 +25,6 @@ import will.dev.smart_invite_v3.repository.InvitationRepository;
 import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.FirebaseStorageService;
 import will.dev.smart_invite_v3.service.InvitationService;
-
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -44,11 +41,14 @@ public class InvitationServiceImpl implements InvitationService {
     private final InvitationCardRepository cardRepository;
     private final FirebaseStorageService firebaseStorage;
     private final QrCodeService          qrCodeService;
-    private final InvitationPdfService   pdfService;
+    private final PdfCardGeneratorService pdfCardGeneratorService;
     private final EmailService           emailService;
 
     @Value("${app.base.url}")
     private String baseUrl;
+
+    @Value("${app.firebase.storage-bucket}")
+    private String firebaseBucket;
 
     @Value("${app.frontend.url:http://localhost:4200}")
     private String frontendUrl;
@@ -136,6 +136,12 @@ public class InvitationServiceImpl implements InvitationService {
         Invitation inv = invitationRepository.findById(invitationId)
                 .orElseThrow(() -> new RuntimeException("Invitation introuvable : " + invitationId));
         resolveOwned(inv.getGuest().getEvent().getId(), organizerId);
+        deleteFirebaseFiles(inv);
+        Guest guest = inv.getGuest();
+        if (guest.getRsvpStatus() == will.dev.smart_invite_v3.enums.RsvpStatus.CONFIRMED) {
+            guest.setRsvpStatus(will.dev.smart_invite_v3.enums.RsvpStatus.PENDING);
+            guestRepository.save(guest);
+        }
         invitationRepository.delete(inv);
     }
 
@@ -186,15 +192,14 @@ public class InvitationServiceImpl implements InvitationService {
                 byte[] qrBytes = qrCodeService.generateWithColor(publicUrl);
                 String qrUrl = firebaseStorage.uploadBytes(qrBytes, folder, token + "_qr.png", "image/png");
 
-                // PDF A5
+                // PDF carte d'invitation (même contenu que la carte créée à l'événement)
                 InvitationCard card = cardRepository.findByEventId(event.getId()).orElse(null);
-                byte[] pdfBytes = pdfService.generate(guest, event, card, qrBytes);
+                byte[] pdfBytes = pdfCardGeneratorService.generate(event, card, qrBytes, guest.getFullName());
                 String pdfUrl = firebaseStorage.uploadBytes(pdfBytes, folder, token + "_invitation.pdf", "application/pdf");
 
                 // Mise à jour invitation
                 inv.setQrCodeUrl(qrUrl);
                 inv.setPdfUrl(pdfUrl);
-                inv.setStatus(InvitationStatus.USED);
                 inv.setIsInvitationSent(true);
                 invitationRepository.save(inv);
 
@@ -238,6 +243,16 @@ public class InvitationServiceImpl implements InvitationService {
         }
 
         return InvitationResponse.from(invitation);
+    }
+
+    private void deleteFirebaseFiles(Invitation inv) {
+        String base = "https://storage.googleapis.com/" + firebaseBucket + "/";
+        if (inv.getQrCodeUrl() != null) {
+            firebaseStorage.delete(inv.getQrCodeUrl().replace(base, ""));
+        }
+        if (inv.getPdfUrl() != null) {
+            firebaseStorage.delete(inv.getPdfUrl().replace(base, ""));
+        }
     }
 
     private Event resolveOwned(Long eventId, Long organizerId) {

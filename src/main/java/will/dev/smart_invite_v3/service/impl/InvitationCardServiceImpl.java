@@ -123,7 +123,7 @@ public class InvitationCardServiceImpl implements InvitationCardService {
         }
 
         try {
-            return pdfGenerator.generate(event, card);
+            return pdfGenerator.generate(event, card, null, null);
         } catch (IOException e) {
             throw new RuntimeException("Erreur lors de la génération du PDF", e);
         }
@@ -166,11 +166,11 @@ public class InvitationCardServiceImpl implements InvitationCardService {
         card.setMainMessagePart2(note.mainMessagePart2());
         card.setSousMainMessage(note.sousMainMessage());
         card.setEventTheme(note.eventTheme());
-        card.setPriorityColors(note.priorityColors());
         card.setQrInstructions(note.qrInstructions());
         card.setDressCodeMessage(note.dressCodeMessage());
         card.setThanksMessage1(note.thanksMessage1());
         card.setClosingMessage(note.closingMessage());
+        card.setCivilNote(note.civilNote());
         card.setTitleColor(note.titleColor());
         card.setTopBandColor(note.topBandColor());
         card.setBottomBandColor(note.bottomBandColor());
@@ -183,8 +183,8 @@ public class InvitationCardServiceImpl implements InvitationCardService {
     }
 
     private CardResponse emptyCard(Long eventId) {
-        return new CardResponse(null, eventId, null, null, null, null,
-                null, null, null, null, null, null, null,
+        return new CardResponse(null, eventId, null, null, null,
+                null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, false, null);
     }
 
