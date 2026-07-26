@@ -8,12 +8,14 @@ import org.springframework.stereotype.Service;
 import sendinblue.ApiClient;
 import sibApi.TransactionalEmailsApi;
 import sibModel.SendSmtpEmail;
+import sibModel.SendSmtpEmailAttachment;
 import sibModel.SendSmtpEmailSender;
 import sibModel.SendSmtpEmailTo;
 import will.dev.smart_invite_v3.service.EmailService;
 
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -44,7 +46,7 @@ public class BrevoEmailServiceImpl implements EmailService {
                 "otp",      otp
         ));
 
-        sendEmail(to, "Votre code de vérification Smart Invite", html);
+        sendEmail(to, "Votre code de vérification Smart Invite", html, List.of());
     }
 
     @Override
@@ -59,7 +61,7 @@ public class BrevoEmailServiceImpl implements EmailService {
                 "ctaLabel", "Réinitialiser mon mot de passe"
         ));
 
-        sendEmail(to, "Réinitialisation de votre mot de passe", html);
+        sendEmail(to, "Réinitialisation de votre mot de passe", html, List.of());
     }
 
     @Override
@@ -75,7 +77,7 @@ public class BrevoEmailServiceImpl implements EmailService {
                 "ctaUrl",   proofUrl,
                 "ctaLabel", "Voir la preuve"
         ));
-        sendEmail(adminEmail, "Nouvelle preuve de paiement à valider — " + eventTitle, html);
+        sendEmail(adminEmail, "Nouvelle preuve de paiement à valider — " + eventTitle, html, List.of());
     }
 
     @Override
@@ -91,22 +93,48 @@ public class BrevoEmailServiceImpl implements EmailService {
                 "title",   "Paiement " + status,
                 "content", content
         ));
-        sendEmail(organizerEmail, "Résultat de votre paiement — " + eventTitle, html);
+        sendEmail(organizerEmail, "Résultat de votre paiement — " + eventTitle, html, List.of());
     }
 
     @Override
-    public void sendInvitationEmail(String toEmail, String guestName, String eventTitle,
-                                     String qrCodeUrl, String pdfUrl) {
+    public void sendRsvpInviteEmail(String toEmail, String guestName, String eventTitle, String rsvpLink) {
         String html = emailTemplateService.render(Map.of(
-                "subject",  "Votre invitation — " + eventTitle,
-                "title",    "Votre invitation",
+                "subject",  "Vous êtes invité(e) — " + eventTitle,
+                "title",    "Invitation à " + eventTitle,
                 "content",  "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/>" +
                             "Vous êtes cordialement invité(e) à <strong>" + eventTitle + "</strong>.<br/>" +
-                            "Votre QR Code est disponible ci-dessous. Présentez-le à l'entrée.",
-                "ctaUrl",   pdfUrl != null ? pdfUrl : qrCodeUrl,
-                "ctaLabel", "Voir mon invitation"
+                            "Veuillez cliquer sur le bouton ci-dessous pour accepter ou refuser cette invitation.",
+                "ctaUrl",   rsvpLink,
+                "ctaLabel", "Répondre à l'invitation"
         ));
-        sendEmail(toEmail, "Votre invitation — " + eventTitle, html);
+        sendEmail(toEmail, "Vous êtes invité(e) — " + eventTitle, html, List.of());
+    }
+
+    @Override
+    public void sendConfirmationEmail(String toEmail, String guestName, String eventTitle,
+                                      byte[] qrCodeBytes, byte[] pdfBytes) {
+        String html = emailTemplateService.render(Map.of(
+                "subject",  "Confirmation de présence — " + eventTitle,
+                "title",    "Merci pour votre confirmation !",
+                "content",  "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/>" +
+                            "Merci d'avoir confirmé votre présence à <strong>" + eventTitle + "</strong>.<br/>" +
+                            "Vous trouverez en pièce jointe votre QR code et votre carte d'invitation.<br/>" +
+                            "Présentez votre QR code à l'entrée."
+        ));
+        List<SendSmtpEmailAttachment> attachments = new java.util.ArrayList<>();
+        if (qrCodeBytes != null) {
+            SendSmtpEmailAttachment qrAttachment = new SendSmtpEmailAttachment();
+            qrAttachment.setContent(qrCodeBytes);
+            qrAttachment.setName("qrcode.png");
+            attachments.add(qrAttachment);
+        }
+        if (pdfBytes != null) {
+            SendSmtpEmailAttachment pdfAttachment = new SendSmtpEmailAttachment();
+            pdfAttachment.setContent(pdfBytes);
+            pdfAttachment.setName("invitation.pdf");
+            attachments.add(pdfAttachment);
+        }
+        sendEmail(toEmail, "Confirmation de présence — " + eventTitle, html, attachments);
     }
 
     @Override
@@ -121,7 +149,7 @@ public class BrevoEmailServiceImpl implements EmailService {
                 "ctaUrl",   pdfUrl != null ? pdfUrl : qrCodeUrl,
                 "ctaLabel", "Voir mon invitation"
         ));
-        sendEmail(toEmail, "Rappel — " + eventTitle, html);
+        sendEmail(toEmail, "Rappel — " + eventTitle, html, List.of());
     }
 
     @Override
@@ -132,7 +160,7 @@ public class BrevoEmailServiceImpl implements EmailService {
                 "content",  "<strong style=\"color:#c9a84c;\">" + guestName + "</strong>" +
                             " vient de s'inscrire à votre événement <strong>" + eventTitle + "</strong>."
         ));
-        sendEmail(organizerEmail, "Nouvelle inscription — " + eventTitle, html);
+        sendEmail(organizerEmail, "Nouvelle inscription — " + eventTitle, html, List.of());
     }
 
     @Override
@@ -145,10 +173,11 @@ public class BrevoEmailServiceImpl implements EmailService {
                 "content",  "<strong style=\"color:#c9a84c;\">" + guestName + "</strong>" +
                             " a <strong>" + label + "</strong> sa participation à <strong>" + eventTitle + "</strong>."
         ));
-        sendEmail(organizerEmail, "Réponse RSVP — " + eventTitle, html);
+        sendEmail(organizerEmail, "Réponse RSVP — " + eventTitle, html, List.of());
     }
 
-    private void sendEmail(String to, String subject, String htmlContent) {
+    private void sendEmail(String to, String subject, String htmlContent,
+                           List<SendSmtpEmailAttachment> attachments) {
         try {
             TransactionalEmailsApi api = new TransactionalEmailsApi(apiClient);
 
@@ -164,6 +193,9 @@ public class BrevoEmailServiceImpl implements EmailService {
             email.setTo(Collections.singletonList(recipient));
             email.setSubject(subject);
             email.setHtmlContent(htmlContent);
+            if (!attachments.isEmpty()) {
+                email.setAttachment(attachments);
+            }
 
             api.sendTransacEmail(email);
 

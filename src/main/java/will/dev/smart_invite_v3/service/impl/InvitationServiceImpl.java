@@ -10,7 +10,6 @@ import will.dev.smart_invite_v3.dto.invitation.request.BulkGenerateRequest;
 import will.dev.smart_invite_v3.dto.invitation.request.CreateGuestRequest;
 import will.dev.smart_invite_v3.dto.invitation.request.RsvpRequest;
 import will.dev.smart_invite_v3.dto.invitation.response.BulkGenerateResponse;
-import will.dev.smart_invite_v3.dto.invitation.response.GuestResponse;
 import will.dev.smart_invite_v3.dto.invitation.response.InvitationResponse;
 import will.dev.smart_invite_v3.dto.invitation.response.PublicInvitationResponse;
 import will.dev.smart_invite_v3.entity.Event;
@@ -50,6 +49,9 @@ public class InvitationServiceImpl implements InvitationService {
 
     @Value("${app.base.url}")
     private String baseUrl;
+
+    @Value("${app.frontend.url:http://localhost:4200}")
+    private String frontendUrl;
 
     @Value("${spring.profiles.active:dev}")
     private String activeProfile;
@@ -173,18 +175,36 @@ public class InvitationServiceImpl implements InvitationService {
             log.warn("Notification RSVP organisateur échouée : {}", e.getMessage());
         }
 
-        // Envoi invitation si CONFIRMED et pas encore envoyée
+        // Génération QR + PDF + envoi confirmation si CONFIRMED
         if (request.status() == will.dev.smart_invite_v3.enums.RsvpStatus.CONFIRMED
-                && Boolean.FALSE.equals(inv.getIsInvitationSent())
                 && guest.getEmail() != null && !guest.getEmail().isBlank()) {
             try {
-                emailService.sendInvitationEmail(
-                        guest.getEmail(), guest.getFullName(),
-                        event.getTitle(), inv.getQrCodeUrl(), inv.getPdfUrl());
+                String folder = activeProfile + "/invitations";
+                String publicUrl = baseUrl + "/api/invitations/" + token;
+
+                // QR Code
+                byte[] qrBytes = qrCodeService.generateWithColor(publicUrl);
+                String qrUrl = firebaseStorage.uploadBytes(qrBytes, folder, token + "_qr.png", "image/png");
+
+                // PDF A5
+                InvitationCard card = cardRepository.findByEventId(event.getId()).orElse(null);
+                byte[] pdfBytes = pdfService.generate(guest, event, card, qrBytes);
+                String pdfUrl = firebaseStorage.uploadBytes(pdfBytes, folder, token + "_invitation.pdf", "application/pdf");
+
+                // Mise à jour invitation
+                inv.setQrCodeUrl(qrUrl);
+                inv.setPdfUrl(pdfUrl);
+                inv.setStatus(InvitationStatus.USED);
                 inv.setIsInvitationSent(true);
                 invitationRepository.save(inv);
+
+                // Email de confirmation avec pièces jointes
+                emailService.sendConfirmationEmail(
+                        guest.getEmail(), guest.getFullName(),
+                        event.getTitle(), qrBytes, pdfBytes);
+
             } catch (Exception e) {
-                log.warn("Envoi invitation après RSVP échoué : {}", e.getMessage());
+                log.warn("Génération/envoi confirmation échoué pour {} : {}", guest.getEmail(), e.getMessage());
             }
         }
 
@@ -195,51 +215,25 @@ public class InvitationServiceImpl implements InvitationService {
 
     private InvitationResponse doGenerate(Guest guest, Event event) {
         String token = UUID.randomUUID().toString();
-        String folder = activeProfile + "/invitations";
-        String publicUrl = baseUrl + "/api/invitations/" + token;
+        String rsvpLink = frontendUrl + "/invitations/" + token + "/rsvp";
 
-        // QR Code
-        String qrUrl = null;
-        byte[] qrBytes = null;
-        try {
-            qrBytes = qrCodeService.generateWithColor(publicUrl);
-            qrUrl = firebaseStorage.uploadBytes(qrBytes, folder, token + "_qr.png", "image/png");
-        } catch (WriterException | IOException e) {
-            log.warn("Erreur génération QR code pour guest {} : {}", guest.getId(), e.getMessage());
-        }
-
-        // PDF A5
-        String pdfUrl = null;
-        try {
-            InvitationCard card = cardRepository.findByEventId(event.getId()).orElse(null);
-            byte[] pdfBytes = pdfService.generate(guest, event, card, qrBytes);
-            pdfUrl = firebaseStorage.uploadBytes(pdfBytes, folder, token + "_invitation.pdf", "application/pdf");
-        } catch (IOException e) {
-            log.warn("Erreur génération PDF pour guest {} : {}", guest.getId(), e.getMessage());
-        }
-
-        // Sauvegarde
         Invitation invitation = Invitation.builder()
                 .guest(guest)
                 .event(event)
                 .token(token)
-                .qrCodeUrl(qrUrl)
-                .pdfUrl(pdfUrl)
                 .status(InvitationStatus.ACTIVE)
                 .isInvitationSent(false)
                 .build();
         invitation = invitationRepository.save(invitation);
 
-        // Envoi email si email présent
+        // Envoi email lien RSVP si email présent
         if (guest.getEmail() != null && !guest.getEmail().isBlank()) {
             try {
-                emailService.sendInvitationEmail(
+                emailService.sendRsvpInviteEmail(
                         guest.getEmail(), guest.getFullName(),
-                        event.getTitle(), qrUrl, pdfUrl);
-                invitation.setIsInvitationSent(true);
-                invitationRepository.save(invitation);
+                        event.getTitle(), rsvpLink);
             } catch (Exception e) {
-                log.warn("Envoi email invitation échoué pour {} : {}", guest.getEmail(), e.getMessage());
+                log.warn("Envoi email RSVP échoué pour {} : {}", guest.getEmail(), e.getMessage());
             }
         }
 
