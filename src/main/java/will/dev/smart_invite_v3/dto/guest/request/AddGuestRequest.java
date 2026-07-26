@@ -9,7 +9,5 @@ public record AddGuestRequest(
         @NotNull NotificationMode notificationMode,
         String email,
         String phoneNumber,
-        String dietaryRestrictions,
-        Integer tableNumber,
-        String companionName
+        Integer tableNumber
 ) {}

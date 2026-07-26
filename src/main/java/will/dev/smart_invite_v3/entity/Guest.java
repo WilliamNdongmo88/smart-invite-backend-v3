@@ -38,18 +38,12 @@ public class Guest {
     @Builder.Default
     private RsvpStatus rsvpStatus = RsvpStatus.PENDING;
 
-    @Column(name = "dietary_restrictions", columnDefinition = "TEXT")
-    private String dietaryRestrictions;
-
     @Column(name = "table_number")
     private Integer tableNumber;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "notification_mode", length = 30)
     private NotificationMode notificationMode;
-
-    @Column(name = "companion_name", length = 200)
-    private String companionName;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

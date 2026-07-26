@@ -19,4 +19,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     @Query("SELECT COALESCE(SUM(p.paidQuota), 0) FROM Payment p WHERE p.event.id = :eventId AND p.status = 'APPROVED'")
     int sumApprovedQuotaByEventId(@Param("eventId") Long eventId);
+
+    Optional<Payment> findTopByEventIdAndStatusOrderByCreatedAtDesc(Long eventId, PaymentStatus status);
 }

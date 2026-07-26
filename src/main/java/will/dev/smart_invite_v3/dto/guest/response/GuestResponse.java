@@ -13,9 +13,7 @@ public record GuestResponse(
         String email,
         String phoneNumber,
         RsvpStatus rsvpStatus,
-        String dietaryRestrictions,
         Integer tableNumber,
-        String companionName,
         NotificationMode notificationMode,
         LocalDateTime createdAt
 ) {
@@ -27,9 +25,7 @@ public record GuestResponse(
                 g.getEmail(),
                 g.getPhoneNumber(),
                 g.getRsvpStatus(),
-                g.getDietaryRestrictions(),
                 g.getTableNumber(),
-                g.getCompanionName(),
                 g.getNotificationMode(),
                 g.getCreatedAt()
         );

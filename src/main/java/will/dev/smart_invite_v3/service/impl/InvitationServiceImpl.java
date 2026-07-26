@@ -189,6 +189,7 @@ public class InvitationServiceImpl implements InvitationService {
         // Génération QR + PDF + envoi confirmation si CONFIRMED
         if (request.status() == will.dev.smart_invite_v3.enums.RsvpStatus.CONFIRMED
                 && guest.getEmail() != null && !guest.getEmail().isBlank()) {
+            checkQuotaAvailable(event.getId());
             try {
                 String folder = activeProfile + "/invitations";
                 String publicUrl = apiUrl + "/api/invitations/" + token;
@@ -212,6 +213,7 @@ public class InvitationServiceImpl implements InvitationService {
                 emailService.sendConfirmationEmail(
                         guest.getEmail(), guest.getFullName(),
                         event.getTitle(), qrBytes, pdfBytes);
+                incrementSentInvitations(event.getId());
 
             } catch (Exception e) {
                 log.warn("Génération/envoi confirmation échoué pour {} : {}", guest.getEmail(), e.getMessage());
@@ -228,6 +230,7 @@ public class InvitationServiceImpl implements InvitationService {
     public InvitationResponse generateFromLink(Long eventId, CreateGuestRequest request, Long organizerId) {
         Event event = resolveOwned(eventId, organizerId);
         checkPaymentApproved(eventId, organizerId);
+        checkQuotaAvailable(eventId);
 
         Guest guest = Guest.builder()
                 .event(event)
@@ -275,6 +278,7 @@ public class InvitationServiceImpl implements InvitationService {
                 emailService.sendConfirmationEmail(
                         guest.getEmail(), guest.getFullName(),
                         event.getTitle(), qrBytes, pdfBytes);
+                incrementSentInvitations(event.getId());
             } catch (Exception e) {
                 log.warn("Envoi email remerciement échoué pour {} : {}", guest.getEmail(), e.getMessage());
             }
@@ -322,12 +326,44 @@ public class InvitationServiceImpl implements InvitationService {
         }
     }
 
+    private void checkQuotaAvailable(Long eventId) {
+        paymentRepository.findTopByEventIdAndStatusOrderByCreatedAtDesc(
+                eventId, will.dev.smart_invite_v3.enums.PaymentStatus.APPROVED)
+            .ifPresent(payment -> {
+                if (payment.getSentInvitations() >= payment.getPaidQuota()) {
+                    throw new RuntimeException(
+                        "Quota d'invitations épuisé : vous avez atteint la limite de " +
+                        payment.getPaidQuota() + " invitations. Veuillez soumettre une nouvelle preuve de paiement.");
+                }
+            });
+    }
+
     private void checkPaymentApproved(Long eventId, Long organizerId) {
         if (!paymentRepository.existsByEventIdAndOrganizerIdAndStatus(
                 eventId, organizerId, will.dev.smart_invite_v3.enums.PaymentStatus.APPROVED)) {
             throw new RuntimeException(
                 "Paiement requis : veuillez effectuer et faire approuver votre paiement avant de générer des invitations.");
         }
+    }
+
+    private void incrementSentInvitations(Long eventId) {
+        paymentRepository.findTopByEventIdAndStatusOrderByCreatedAtDesc(
+                eventId, will.dev.smart_invite_v3.enums.PaymentStatus.APPROVED)
+            .ifPresent(payment -> {
+                payment.setSentInvitations(payment.getSentInvitations() + 1);
+                paymentRepository.save(payment);
+                if (payment.getSentInvitations().equals(payment.getPaidQuota())) {
+                    try {
+                        emailService.sendQuotaReachedNotification(
+                                payment.getOrganizer().getEmail(),
+                                payment.getOrganizer().getName(),
+                                payment.getEvent().getTitle(),
+                                payment.getPaidQuota());
+                    } catch (Exception e) {
+                        log.warn("Notification quota atteint échouée pour event {} : {}", eventId, e.getMessage());
+                    }
+                }
+            });
     }
 
     private Event resolveOwned(Long eventId, Long organizerId) {

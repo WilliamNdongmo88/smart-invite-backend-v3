@@ -65,9 +65,7 @@ public class GuestServiceImpl implements GuestService {
                 .notificationMode(request.notificationMode())
                 .email(request.email())
                 .phoneNumber(request.phoneNumber())
-                .dietaryRestrictions(request.dietaryRestrictions())
                 .tableNumber(request.tableNumber())
-                .companionName(request.companionName())
                 .build();
 
         return GuestResponse.from(guestRepository.save(guest));
@@ -93,9 +91,7 @@ public class GuestServiceImpl implements GuestService {
         if (request.fullName()            != null) guest.setFullName(request.fullName());
         if (request.email()               != null) guest.setEmail(request.email());
         if (request.phoneNumber()         != null) guest.setPhoneNumber(request.phoneNumber());
-        if (request.dietaryRestrictions() != null) guest.setDietaryRestrictions(request.dietaryRestrictions());
         if (request.tableNumber()         != null) guest.setTableNumber(request.tableNumber());
-        if (request.companionName()       != null) guest.setCompanionName(request.companionName());
         if (request.notificationMode()    != null) guest.setNotificationMode(request.notificationMode());
 
         return GuestResponse.from(guestRepository.save(guest));

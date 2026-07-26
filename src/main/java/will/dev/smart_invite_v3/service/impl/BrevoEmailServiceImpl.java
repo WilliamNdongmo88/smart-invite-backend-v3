@@ -100,7 +100,7 @@ public class BrevoEmailServiceImpl implements EmailService {
     public void sendRsvpInviteEmail(String toEmail, String guestName, String eventTitle, String rsvpLink) {
         String html = emailTemplateService.render(Map.of(
                 "subject",  "Vous êtes invité(e) — " + eventTitle,
-                "title",    "Invitation à " + eventTitle,
+                "title",    "Invitation - " + eventTitle,
                 "content",  "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/>" +
                             "Vous êtes cordialement invité(e) à <strong>" + eventTitle + "</strong>.<br/>" +
                             "Veuillez cliquer sur le bouton ci-dessous pour accepter ou refuser cette invitation.",
@@ -174,6 +174,20 @@ public class BrevoEmailServiceImpl implements EmailService {
                             " a <strong>" + label + "</strong> sa participation à <strong>" + eventTitle + "</strong>."
         ));
         sendEmail(organizerEmail, "Réponse RSVP — " + eventTitle, html, List.of());
+    }
+
+    @Override
+    public void sendQuotaReachedNotification(String organizerEmail, String organizerName,
+                                              String eventTitle, int paidQuota) {
+        String html = emailTemplateService.render(Map.of(
+                "subject",  "Quota d'invitations atteint — " + eventTitle,
+                "title",    "Quota d'invitations atteint",
+                "content",  "Bonjour <strong style=\"color:#c9a84c;\">" + organizerName + "</strong>,<br/>" +
+                            "Vous avez atteint votre quota de <strong>" + paidQuota + " invitations</strong>" +
+                            " pour l'événement <strong>" + eventTitle + "</strong>.<br/>" +
+                            "Pour continuer à envoyer des invitations, veuillez soumettre une nouvelle preuve de paiement."
+        ));
+        sendEmail(organizerEmail, "Quota d'invitations atteint — " + eventTitle, html, List.of());
     }
 
     private void sendEmail(String to, String subject, String htmlContent,

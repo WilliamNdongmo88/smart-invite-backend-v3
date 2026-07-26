@@ -6,8 +6,6 @@ public record UpdateGuestRequest(
         String fullName,
         String email,
         String phoneNumber,
-        String dietaryRestrictions,
         Integer tableNumber,
-        String companionName,
         NotificationMode notificationMode
 ) {}

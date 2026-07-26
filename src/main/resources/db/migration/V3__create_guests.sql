@@ -12,8 +12,6 @@ CREATE TABLE guests (
 
     rsvp_status VARCHAR(30),
 
-    dietary_restrictions TEXT,
-
     table_number INTEGER,
 
     notification_mode VARCHAR(30),
