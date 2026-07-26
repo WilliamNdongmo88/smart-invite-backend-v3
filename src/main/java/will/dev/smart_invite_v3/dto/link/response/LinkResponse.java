@@ -15,7 +15,7 @@ public record LinkResponse(
         boolean expired,
         boolean full
 ) {
-    public static LinkResponse from(Link link, String baseUrl) {
+    public static LinkResponse from(Link link, String apiUrl) {
         boolean expired = link.getDateLimitLink() != null
                 && link.getDateLimitLink().isBefore(LocalDateTime.now());
         boolean full = link.getLimitCount() != null
@@ -24,7 +24,7 @@ public record LinkResponse(
                 link.getId(),
                 link.getEvent().getId(),
                 link.getToken(),
-                baseUrl + "/api/link/join/" + link.getToken(),
+                apiUrl + "/api/link/join/" + link.getToken(),
                 link.getUsedCount(),
                 link.getLimitCount(),
                 link.getDateLimitLink(),

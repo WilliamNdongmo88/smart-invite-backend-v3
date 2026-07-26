@@ -45,7 +45,7 @@ public class InvitationServiceImpl implements InvitationService {
     private final EmailService           emailService;
 
     @Value("${app.base.url}")
-    private String baseUrl;
+    private String apiUrl;
 
     @Value("${app.firebase.storage-bucket}")
     private String firebaseBucket;
@@ -186,7 +186,7 @@ public class InvitationServiceImpl implements InvitationService {
                 && guest.getEmail() != null && !guest.getEmail().isBlank()) {
             try {
                 String folder = activeProfile + "/invitations";
-                String publicUrl = baseUrl + "/api/invitations/" + token;
+                String publicUrl = apiUrl + "/api/invitations/" + token;
 
                 // QR Code
                 byte[] qrBytes = qrCodeService.generateWithColor(publicUrl);

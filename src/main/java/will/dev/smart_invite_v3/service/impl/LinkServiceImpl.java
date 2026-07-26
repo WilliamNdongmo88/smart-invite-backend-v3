@@ -35,8 +35,8 @@ public class LinkServiceImpl implements LinkService {
     private final InvitationService invitationService;
     private final EmailService      emailService;
 
-    @Value("${app.base.url}")
-    private String baseUrl;
+    @Value("${app.env.apiUrl}")
+    private String apiUrl;
 
     // ---- US-035 ----
 
@@ -50,7 +50,7 @@ public class LinkServiceImpl implements LinkService {
                 .limitCount(request.limitCount())
                 .dateLimitLink(request.dateLimitLink())
                 .build();
-        return LinkResponse.from(linkRepository.save(link), baseUrl);
+        return LinkResponse.from(linkRepository.save(link), apiUrl);
     }
 
     // ---- US-036 ----
@@ -59,7 +59,7 @@ public class LinkServiceImpl implements LinkService {
     public List<LinkResponse> getByEvent(Long eventId, Long organizerId) {
         resolveOwned(eventId, organizerId);
         return linkRepository.findAllByEventId(eventId)
-                .stream().map(l -> LinkResponse.from(l, baseUrl)).toList();
+                .stream().map(l -> LinkResponse.from(l, apiUrl)).toList();
     }
 
     @Override
@@ -68,7 +68,7 @@ public class LinkServiceImpl implements LinkService {
         Link link = resolveOwnedLink(linkId, organizerId);
         if (request.limitCount() != null)    link.setLimitCount(request.limitCount());
         if (request.dateLimitLink() != null) link.setDateLimitLink(request.dateLimitLink());
-        return LinkResponse.from(linkRepository.save(link), baseUrl);
+        return LinkResponse.from(linkRepository.save(link), apiUrl);
     }
 
     @Override

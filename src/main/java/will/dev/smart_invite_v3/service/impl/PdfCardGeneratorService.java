@@ -40,9 +40,6 @@ public class PdfCardGeneratorService {
     @Value("${spring.profiles.active:dev}")
     private String activeProfile;
 
-    @Value("${app.base.url}")
-    private String baseUrl;
-
     private byte[] logoBytes;
 
     @PostConstruct
