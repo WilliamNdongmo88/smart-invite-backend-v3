@@ -23,6 +23,7 @@ import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.GuestRepository;
 import will.dev.smart_invite_v3.repository.InvitationCardRepository;
 import will.dev.smart_invite_v3.repository.InvitationRepository;
+import will.dev.smart_invite_v3.repository.PaymentRepository;
 import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.FirebaseStorageService;
 import will.dev.smart_invite_v3.service.InvitationService;
@@ -40,6 +41,7 @@ public class InvitationServiceImpl implements InvitationService {
     private final GuestRepository        guestRepository;
     private final InvitationRepository   invitationRepository;
     private final InvitationCardRepository cardRepository;
+    private final PaymentRepository      paymentRepository;
     private final FirebaseStorageService firebaseStorage;
     private final QrCodeService          qrCodeService;
     private final PdfCardGeneratorService pdfCardGeneratorService;
@@ -63,6 +65,7 @@ public class InvitationServiceImpl implements InvitationService {
     @Transactional
     public InvitationResponse generate(Long eventId, CreateGuestRequest request, Long organizerId) {
         Event event = resolveOwned(eventId, organizerId);
+        checkPaymentApproved(eventId, organizerId);
 
         Guest guest = Guest.builder()
                 .event(event)
@@ -82,6 +85,7 @@ public class InvitationServiceImpl implements InvitationService {
     @Transactional
     public BulkGenerateResponse bulkGenerate(BulkGenerateRequest request, Long organizerId) {
         Event event = resolveOwned(request.eventId(), organizerId);
+        checkPaymentApproved(request.eventId(), organizerId);
 
         List<InvitationResponse> generated = new ArrayList<>();
         List<String> skippedReasons = new ArrayList<>();
@@ -223,6 +227,7 @@ public class InvitationServiceImpl implements InvitationService {
     @Transactional
     public InvitationResponse generateFromLink(Long eventId, CreateGuestRequest request, Long organizerId) {
         Event event = resolveOwned(eventId, organizerId);
+        checkPaymentApproved(eventId, organizerId);
 
         Guest guest = Guest.builder()
                 .event(event)
@@ -314,6 +319,14 @@ public class InvitationServiceImpl implements InvitationService {
         }
         if (inv.getPdfUrl() != null) {
             firebaseStorage.delete(inv.getPdfUrl().replace(base, ""));
+        }
+    }
+
+    private void checkPaymentApproved(Long eventId, Long organizerId) {
+        if (!paymentRepository.existsByEventIdAndOrganizerIdAndStatus(
+                eventId, organizerId, will.dev.smart_invite_v3.enums.PaymentStatus.APPROVED)) {
+            throw new RuntimeException(
+                "Paiement requis : veuillez effectuer et faire approuver votre paiement avant de générer des invitations.");
         }
     }
 

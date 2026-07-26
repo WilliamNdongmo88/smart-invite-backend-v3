@@ -16,6 +16,7 @@ import will.dev.smart_invite_v3.exception.EventAccessDeniedException;
 import will.dev.smart_invite_v3.exception.EventNotFoundException;
 import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.LinkRepository;
+import will.dev.smart_invite_v3.repository.PaymentRepository;
 import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.InvitationService;
 import will.dev.smart_invite_v3.service.LinkService;
@@ -34,6 +35,7 @@ public class LinkServiceImpl implements LinkService {
     private final EventRepository   eventRepository;
     private final InvitationService invitationService;
     private final EmailService      emailService;
+    private final PaymentRepository paymentRepository;
 
     @Value("${app.env.apiUrl}")
     private String apiUrl;
@@ -44,6 +46,11 @@ public class LinkServiceImpl implements LinkService {
     @Transactional
     public LinkResponse create(CreateLinkRequest request, Long organizerId) {
         Event event = resolveOwned(request.eventId(), organizerId);
+        if (!paymentRepository.existsByEventIdAndOrganizerIdAndStatus(
+                request.eventId(), organizerId, will.dev.smart_invite_v3.enums.PaymentStatus.APPROVED)) {
+            throw new RuntimeException(
+                "Paiement requis : veuillez effectuer et faire approuver votre paiement avant de créer un lien d'invitation.");
+        }
         Link link = Link.builder()
                 .event(event)
                 .token(UUID.randomUUID().toString())
