@@ -221,6 +221,7 @@ public class InvitationServiceImpl implements InvitationService {
         // Sauvegarde
         Invitation invitation = Invitation.builder()
                 .guest(guest)
+                .event(event)
                 .token(token)
                 .qrCodeUrl(qrUrl)
                 .pdfUrl(pdfUrl)

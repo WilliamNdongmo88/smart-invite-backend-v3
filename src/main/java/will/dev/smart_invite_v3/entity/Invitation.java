@@ -23,6 +23,10 @@ public class Invitation {
     @JoinColumn(name = "guest_id", nullable = false, unique = true)
     private Guest guest;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "event_id")
+    private Event event;
+
     @Column(nullable = false, unique = true, length = 255)
     private String token;
 
