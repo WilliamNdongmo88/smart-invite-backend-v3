@@ -95,7 +95,7 @@ public class LinkServiceImpl implements LinkService {
         link.setUsedCount(link.getUsedCount() + 1);
         linkRepository.save(link);
 
-        InvitationResponse invitation = invitationService.generate(
+        InvitationResponse invitation = invitationService.generateFromLink(
                 link.getEvent().getId(), request, link.getEvent().getOrganizer().getId());
 
         // Notification organisateur

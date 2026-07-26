@@ -29,4 +29,7 @@ public interface InvitationService {
 
     /** RSVP invité */
     PublicInvitationResponse rsvp(String token, RsvpRequest request);
+
+    /** Inscription via lien public — RSVP CONFIRMED immédiat, génère QR+PDF+email remerciement */
+    InvitationResponse generateFromLink(Long eventId, CreateGuestRequest request, Long organizerId);
 }

@@ -16,6 +16,7 @@ import will.dev.smart_invite_v3.entity.Guest;
 import will.dev.smart_invite_v3.entity.Invitation;
 import will.dev.smart_invite_v3.entity.InvitationCard;
 import will.dev.smart_invite_v3.enums.InvitationStatus;
+import will.dev.smart_invite_v3.enums.RsvpStatus;
 import will.dev.smart_invite_v3.exception.EventAccessDeniedException;
 import will.dev.smart_invite_v3.exception.EventNotFoundException;
 import will.dev.smart_invite_v3.repository.EventRepository;
@@ -214,6 +215,67 @@ public class InvitationServiceImpl implements InvitationService {
         }
 
         return PublicInvitationResponse.from(inv);
+    }
+
+    // ---- Inscription via lien public ----
+
+    @Override
+    @Transactional
+    public InvitationResponse generateFromLink(Long eventId, CreateGuestRequest request, Long organizerId) {
+        Event event = resolveOwned(eventId, organizerId);
+
+        Guest guest = Guest.builder()
+                .event(event)
+                .fullName(request.fullName())
+                .email(request.email())
+                .phoneNumber(request.phoneNumber())
+                .notificationMode(request.notificationMode())
+                .rsvpStatus(RsvpStatus.CONFIRMED)
+                .build();
+        guest = guestRepository.save(guest);
+
+        String token = UUID.randomUUID().toString();
+        String folder = activeProfile + "/invitations";
+        String publicUrl = apiUrl + "/api/invitations/" + token;
+
+        // QR Code + PDF générés immédiatement
+        byte[] qrBytes = null;
+        String qrUrl = null;
+        byte[] pdfBytes = null;
+        String pdfUrl = null;
+        try {
+            qrBytes = qrCodeService.generateWithColor(publicUrl);
+            qrUrl = firebaseStorage.uploadBytes(qrBytes, folder, token + "_qr.png", "image/png");
+            InvitationCard card = cardRepository.findByEventId(event.getId()).orElse(null);
+            pdfBytes = pdfCardGeneratorService.generate(event, card, qrBytes, guest.getFullName());
+            pdfUrl = firebaseStorage.uploadBytes(pdfBytes, folder, token + "_invitation.pdf", "application/pdf");
+        } catch (Exception e) {
+            log.warn("Erreur génération QR/PDF via lien pour {} : {}", guest.getEmail(), e.getMessage());
+        }
+
+        Invitation invitation = Invitation.builder()
+                .guest(guest)
+                .event(event)
+                .token(token)
+                .qrCodeUrl(qrUrl)
+                .pdfUrl(pdfUrl)
+                .status(InvitationStatus.USED)
+                .isInvitationSent(true)
+                .build();
+        invitation = invitationRepository.save(invitation);
+
+        // Email de remerciement avec QR+PDF en pièces jointes
+        if (guest.getEmail() != null && !guest.getEmail().isBlank() && qrBytes != null) {
+            try {
+                emailService.sendConfirmationEmail(
+                        guest.getEmail(), guest.getFullName(),
+                        event.getTitle(), qrBytes, pdfBytes);
+            } catch (Exception e) {
+                log.warn("Envoi email remerciement échoué pour {} : {}", guest.getEmail(), e.getMessage());
+            }
+        }
+
+        return InvitationResponse.from(invitation);
     }
 
     // ---- Core generation ----
