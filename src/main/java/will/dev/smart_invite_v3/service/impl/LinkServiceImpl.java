@@ -1,6 +1,7 @@
 package will.dev.smart_invite_v3.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import will.dev.smart_invite_v3.exception.EventAccessDeniedException;
 import will.dev.smart_invite_v3.exception.EventNotFoundException;
 import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.LinkRepository;
+import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.InvitationService;
 import will.dev.smart_invite_v3.service.LinkService;
 
@@ -22,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -30,6 +33,7 @@ public class LinkServiceImpl implements LinkService {
     private final LinkRepository    linkRepository;
     private final EventRepository   eventRepository;
     private final InvitationService invitationService;
+    private final EmailService      emailService;
 
     @Value("${app.base.url}")
     private String baseUrl;
@@ -91,8 +95,20 @@ public class LinkServiceImpl implements LinkService {
         link.setUsedCount(link.getUsedCount() + 1);
         linkRepository.save(link);
 
-        return invitationService.generate(link.getEvent().getId(), request,
-                link.getEvent().getOrganizer().getId());
+        InvitationResponse invitation = invitationService.generate(
+                link.getEvent().getId(), request, link.getEvent().getOrganizer().getId());
+
+        // Notification organisateur
+        try {
+            emailService.sendNewGuestNotification(
+                    link.getEvent().getOrganizer().getEmail(),
+                    request.fullName(),
+                    link.getEvent().getTitle());
+        } catch (Exception e) {
+            log.warn("Notification organisateur échouée après inscription via lien : {}", e.getMessage());
+        }
+
+        return invitation;
     }
 
     // ---- Helpers ----

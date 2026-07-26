@@ -48,6 +48,9 @@ public class Guest {
     @Column(name = "notification_mode", length = 30)
     private NotificationMode notificationMode;
 
+    @Column(name = "companion_name", length = 200)
+    private String companionName;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

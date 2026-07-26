@@ -156,8 +156,38 @@ public class InvitationServiceImpl implements InvitationService {
         if (inv.getStatus() == InvitationStatus.REVOKED) {
             throw new RuntimeException("Cette invitation a été révoquée");
         }
-        inv.getGuest().setRsvpStatus(request.status());
-        guestRepository.save(inv.getGuest());
+        Guest guest = inv.getGuest();
+        guest.setRsvpStatus(request.status());
+        guestRepository.save(guest);
+
+        Event event = guest.getEvent();
+
+        // Notification organisateur
+        try {
+            emailService.sendRsvpNotification(
+                    event.getOrganizer().getEmail(),
+                    guest.getFullName(),
+                    event.getTitle(),
+                    request.status().name());
+        } catch (Exception e) {
+            log.warn("Notification RSVP organisateur échouée : {}", e.getMessage());
+        }
+
+        // Envoi invitation si CONFIRMED et pas encore envoyée
+        if (request.status() == will.dev.smart_invite_v3.enums.RsvpStatus.CONFIRMED
+                && Boolean.FALSE.equals(inv.getIsInvitationSent())
+                && guest.getEmail() != null && !guest.getEmail().isBlank()) {
+            try {
+                emailService.sendInvitationEmail(
+                        guest.getEmail(), guest.getFullName(),
+                        event.getTitle(), inv.getQrCodeUrl(), inv.getPdfUrl());
+                inv.setIsInvitationSent(true);
+                invitationRepository.save(inv);
+            } catch (Exception e) {
+                log.warn("Envoi invitation après RSVP échoué : {}", e.getMessage());
+            }
+        }
+
         return PublicInvitationResponse.from(inv);
     }
 

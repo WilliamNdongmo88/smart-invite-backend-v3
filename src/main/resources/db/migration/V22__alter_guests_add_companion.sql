@@ -1,0 +1,2 @@
+ALTER TABLE guests
+    ADD COLUMN IF NOT EXISTS companion_name VARCHAR(200);

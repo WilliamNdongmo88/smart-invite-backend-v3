@@ -16,4 +16,12 @@ public interface EmailService {
 
     void sendInvitationEmail(String toEmail, String guestName, String eventTitle,
                              String qrCodeUrl, String pdfUrl);
+
+    void sendReminderEmail(String toEmail, String guestName, String eventTitle,
+                           String qrCodeUrl, String pdfUrl);
+
+    void sendNewGuestNotification(String organizerEmail, String guestName, String eventTitle);
+
+    void sendRsvpNotification(String organizerEmail, String guestName,
+                              String eventTitle, String rsvpStatus);
 }

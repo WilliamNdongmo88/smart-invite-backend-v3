@@ -109,6 +109,45 @@ public class BrevoEmailServiceImpl implements EmailService {
         sendEmail(toEmail, "Votre invitation — " + eventTitle, html);
     }
 
+    @Override
+    public void sendReminderEmail(String toEmail, String guestName, String eventTitle,
+                                   String qrCodeUrl, String pdfUrl) {
+        String html = emailTemplateService.render(Map.of(
+                "subject",  "Rappel — " + eventTitle,
+                "title",    "Rappel d'invitation",
+                "content",  "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/>" +
+                            "Ceci est un rappel pour l'événement <strong>" + eventTitle + "</strong>.<br/>" +
+                            "Votre QR Code est disponible ci-dessous.",
+                "ctaUrl",   pdfUrl != null ? pdfUrl : qrCodeUrl,
+                "ctaLabel", "Voir mon invitation"
+        ));
+        sendEmail(toEmail, "Rappel — " + eventTitle, html);
+    }
+
+    @Override
+    public void sendNewGuestNotification(String organizerEmail, String guestName, String eventTitle) {
+        String html = emailTemplateService.render(Map.of(
+                "subject",  "Nouvelle inscription — " + eventTitle,
+                "title",    "Nouvelle inscription",
+                "content",  "<strong style=\"color:#c9a84c;\">" + guestName + "</strong>" +
+                            " vient de s'inscrire à votre événement <strong>" + eventTitle + "</strong>."
+        ));
+        sendEmail(organizerEmail, "Nouvelle inscription — " + eventTitle, html);
+    }
+
+    @Override
+    public void sendRsvpNotification(String organizerEmail, String guestName,
+                                      String eventTitle, String rsvpStatus) {
+        String label = "CONFIRMED".equals(rsvpStatus) ? "confirmé ✅" : "décliné ❌";
+        String html = emailTemplateService.render(Map.of(
+                "subject",  "Réponse RSVP — " + eventTitle,
+                "title",    "Réponse RSVP reçue",
+                "content",  "<strong style=\"color:#c9a84c;\">" + guestName + "</strong>" +
+                            " a <strong>" + label + "</strong> sa participation à <strong>" + eventTitle + "</strong>."
+        ));
+        sendEmail(organizerEmail, "Réponse RSVP — " + eventTitle, html);
+    }
+
     private void sendEmail(String to, String subject, String htmlContent) {
         try {
             TransactionalEmailsApi api = new TransactionalEmailsApi(apiClient);
