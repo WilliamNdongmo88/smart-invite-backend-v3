@@ -14,7 +14,7 @@ backend/.mvn/wrapper/maven-wrapper.jar
 .sts4-cache
 
 ### IntelliJ IDEA ###
-backend/.idea
+.idea
 *.iws
 *.iml
 *.ipr
@@ -36,3 +36,7 @@ build/
 backend/src/main/resources/.env
 backend/src/main/resources/application-dev.properties
 backend/src/main/resources/firebase/serviceAccountKey.json
+
+.wwebjs_auth/
+.wwebjs_cache/
+node_modules/

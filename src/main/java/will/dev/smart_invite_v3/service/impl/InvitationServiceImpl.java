@@ -24,6 +24,7 @@ import will.dev.smart_invite_v3.repository.GuestRepository;
 import will.dev.smart_invite_v3.repository.InvitationCardRepository;
 import will.dev.smart_invite_v3.repository.InvitationRepository;
 import will.dev.smart_invite_v3.repository.PaymentRepository;
+import will.dev.smart_invite_v3.enums.NotificationMode;
 import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.FirebaseStorageService;
 import will.dev.smart_invite_v3.service.InvitationService;
@@ -46,6 +47,7 @@ public class InvitationServiceImpl implements InvitationService {
     private final QrCodeService          qrCodeService;
     private final PdfCardGeneratorService pdfCardGeneratorService;
     private final EmailService           emailService;
+    private final NotificationDispatcher  notificationDispatcher;
 
     @Value("${app.base.url}")
     private String apiUrl;
@@ -211,10 +213,12 @@ public class InvitationServiceImpl implements InvitationService {
                 inv.setIsInvitationSent(true);
                 invitationRepository.save(inv);
 
-                // Email de confirmation avec pièces jointes
-                emailService.sendConfirmationEmail(
-                        guest.getEmail(), guest.getFullName(),
-                        event.getTitle(), qrBytes, pdfBytes);
+                // Confirmation selon notificationMode
+                notificationDispatcher.sendConfirmation(
+                        guest.getNotificationMode(),
+                        guest.getEmail(), guest.getPhoneNumber(),
+                        guest.getFullName(), event.getTitle(),
+                        qrBytes, pdfBytes, qrUrl, pdfUrl);
                 incrementSentInvitations(event.getId());
 
             } catch (Exception e) {
@@ -275,16 +279,14 @@ public class InvitationServiceImpl implements InvitationService {
                 .build();
         invitation = invitationRepository.save(invitation);
 
-        // Email de remerciement avec QR+PDF en pièces jointes
-        if (guest.getEmail() != null && !guest.getEmail().isBlank() && qrBytes != null) {
-            try {
-                emailService.sendConfirmationEmail(
-                        guest.getEmail(), guest.getFullName(),
-                        event.getTitle(), qrBytes, pdfBytes);
-                incrementSentInvitations(event.getId());
-            } catch (Exception e) {
-                log.warn("Envoi email remerciement échoué pour {} : {}", guest.getEmail(), e.getMessage());
-            }
+        // Confirmation selon notificationMode
+        if (qrBytes != null) {
+            notificationDispatcher.sendConfirmation(
+                    guest.getNotificationMode(),
+                    guest.getEmail(), guest.getPhoneNumber(),
+                    guest.getFullName(), event.getTitle(),
+                    qrBytes, pdfBytes, qrUrl, pdfUrl);
+            incrementSentInvitations(event.getId());
         }
 
         return InvitationResponse.from(invitation);
@@ -305,16 +307,12 @@ public class InvitationServiceImpl implements InvitationService {
                 .build();
         invitation = invitationRepository.save(invitation);
 
-        // Envoi email lien RSVP si email présent
-        if (guest.getEmail() != null && !guest.getEmail().isBlank()) {
-            try {
-                emailService.sendRsvpInviteEmail(
-                        guest.getEmail(), guest.getFullName(),
-                        event.getTitle(), event.getType(), rsvpLink);
-            } catch (Exception e) {
-                log.warn("Envoi email RSVP échoué pour {} : {}", guest.getEmail(), e.getMessage());
-            }
-        }
+        // Envoi lien RSVP selon notificationMode
+        notificationDispatcher.sendRsvpInvite(
+                guest.getNotificationMode(),
+                guest.getEmail(), guest.getPhoneNumber(),
+                guest.getFullName(), event.getTitle(),
+                event.getType(), rsvpLink);
 
         return InvitationResponse.from(invitation);
     }

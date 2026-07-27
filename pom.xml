@@ -219,6 +219,7 @@
 						<exclude>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok</artifactId>
+                            <optional>true</optional>
 						</exclude>
 					</excludes>
 				</configuration>
@@ -226,6 +227,9 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<release>17</release>
+				</configuration>
 				<executions>
 					<execution>
 						<id>default-compile</id>
@@ -238,6 +242,7 @@
 								<path>
 									<groupId>org.projectlombok</groupId>
 									<artifactId>lombok</artifactId>
+                                    <optional>true</optional>
 								</path>
 								<path>
 									<groupId>org.springframework.boot</groupId>
