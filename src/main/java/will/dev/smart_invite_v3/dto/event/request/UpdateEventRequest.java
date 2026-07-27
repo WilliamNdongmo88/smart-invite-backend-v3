@@ -3,7 +3,6 @@ package will.dev.smart_invite_v3.dto.event.request;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import will.dev.smart_invite_v3.enums.EventStatus;
 import will.dev.smart_invite_v3.enums.EventType;
 
 import java.time.LocalDateTime;
@@ -17,9 +16,6 @@ public record UpdateEventRequest(
 
         @NotNull(message = "Le type d'événement est obligatoire")
         EventType type,
-
-        @NotNull(message = "Le statut est obligatoire")
-        EventStatus status,
 
         String budget,
 

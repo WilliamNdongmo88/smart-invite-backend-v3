@@ -198,10 +198,12 @@ public class InvitationServiceImpl implements InvitationService {
                 byte[] qrBytes = qrCodeService.generateWithColor(publicUrl);
                 String qrUrl = firebaseStorage.uploadBytes(qrBytes, folder, token + "_qr.png", "image/png");
 
-                // PDF carte d'invitation (même contenu que la carte créée à l'événement)
+                // PDF
                 InvitationCard card = cardRepository.findByEventId(event.getId()).orElse(null);
-                byte[] pdfBytes = pdfCardGeneratorService.generate(event, card, qrBytes, guest.getFullName());
-                String pdfUrl = firebaseStorage.uploadBytes(pdfBytes, folder, token + "_invitation.pdf", "application/pdf");
+                byte[] pdfBytes = buildPdfBytes(event, card, qrBytes, guest.getFullName());
+                String pdfUrl = pdfBytes != null
+                        ? firebaseStorage.uploadBytes(pdfBytes, folder, token + "_invitation.pdf", "application/pdf")
+                        : null;
 
                 // Mise à jour invitation
                 inv.setQrCodeUrl(qrUrl);
@@ -255,8 +257,9 @@ public class InvitationServiceImpl implements InvitationService {
             qrBytes = qrCodeService.generateWithColor(publicUrl);
             qrUrl = firebaseStorage.uploadBytes(qrBytes, folder, token + "_qr.png", "image/png");
             InvitationCard card = cardRepository.findByEventId(event.getId()).orElse(null);
-            pdfBytes = pdfCardGeneratorService.generate(event, card, qrBytes, guest.getFullName());
-            pdfUrl = firebaseStorage.uploadBytes(pdfBytes, folder, token + "_invitation.pdf", "application/pdf");
+            pdfBytes = buildPdfBytes(event, card, qrBytes, guest.getFullName());
+            if (pdfBytes != null)
+                pdfUrl = firebaseStorage.uploadBytes(pdfBytes, folder, token + "_invitation.pdf", "application/pdf");
         } catch (Exception e) {
             log.warn("Erreur génération QR/PDF via lien pour {} : {}", guest.getEmail(), e.getMessage());
         }
@@ -314,6 +317,23 @@ public class InvitationServiceImpl implements InvitationService {
         }
 
         return InvitationResponse.from(invitation);
+    }
+
+    private byte[] buildPdfBytes(Event event, InvitationCard card, byte[] qrBytes, String guestName) {
+        // Si un modèle importé existe, on l'utilise directement
+        if (card != null && Boolean.TRUE.equals(card.getHasInvitationModelCard())
+                && card.getPdfUrl() != null) {
+            byte[] imported = firebaseStorage.downloadBytes(
+                    card.getPdfUrl().replace("https://storage.googleapis.com/" + firebaseBucket + "/", ""));
+            if (imported != null) return imported;
+        }
+        // Sinon génération dynamique
+        try {
+            return pdfCardGeneratorService.generate(event, card, qrBytes, guestName);
+        } catch (Exception e) {
+            log.warn("Erreur génération PDF pour {} : {}", guestName, e.getMessage());
+            return null;
+        }
     }
 
     private void deleteFirebaseFiles(Invitation inv) {

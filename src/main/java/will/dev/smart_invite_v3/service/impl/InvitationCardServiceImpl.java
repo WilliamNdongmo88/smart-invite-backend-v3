@@ -8,6 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 import will.dev.smart_invite_v3.dto.event.request.CreateEventRequest;
 import will.dev.smart_invite_v3.dto.event.request.CreateEventWithCardRequest;
 import will.dev.smart_invite_v3.dto.event.request.InvitationNoteRequest;
+import will.dev.smart_invite_v3.dto.event.request.UpdateEventWithCardRequest;
 import will.dev.smart_invite_v3.dto.event.response.CardResponse;
 import will.dev.smart_invite_v3.dto.event.response.EventResponse;
 import will.dev.smart_invite_v3.dto.event.response.EventWithCardResponse;
@@ -81,6 +82,40 @@ public class InvitationCardServiceImpl implements InvitationCardService {
         return new EventWithCardResponse(
                 EventResponse.from(savedEvent),
                 CardResponse.from(savedCard, savedEvent.getId())
+        );
+    }
+
+    @Override
+    @Transactional
+    public EventWithCardResponse updateWithCard(Long eventId, UpdateEventWithCardRequest request, Long organizerId) {
+        Event event = resolveOwned(eventId, organizerId);
+
+        var ev = request.event();
+        event.setTitle(ev.title());
+        event.setDescription(ev.description());
+        event.setType(ev.type());
+        event.setBudget(ev.budget());
+        event.setMaxGuests(ev.maxGuests());
+        event.setConcernedNames(ev.concernedNames());
+        event.setEventDate(ev.eventDate());
+        event.setReligiousLocation(ev.religiousLocation());
+        event.setReligiousDateTime(ev.religiousDateTime());
+        event.setCivilLocation(ev.civilLocation());
+        event.setCivilDateTime(ev.civilDateTime());
+        event.setBanquetLocation(ev.banquetLocation());
+        event.setBanquetDateTime(ev.banquetDateTime());
+        event.setShowWeddingReligiousLocation(Boolean.TRUE.equals(ev.showWeddingReligiousLocation()));
+        event.setImportMyModelCard(Boolean.TRUE.equals(ev.importMyModelCard()));
+        Event savedEvent = eventRepository.save(event);
+
+        InvitationCard card = cardRepository.findByEventId(eventId)
+                .orElseGet(() -> InvitationCard.builder().event(savedEvent).build());
+        applyNote(card, request.invitationNote());
+        InvitationCard savedCard = cardRepository.save(card);
+
+        return new EventWithCardResponse(
+                EventResponse.from(savedEvent),
+                CardResponse.from(savedCard, eventId)
         );
     }
 

@@ -87,7 +87,6 @@ public class EventServiceImpl implements EventService {
         event.setTitle(request.title());
         event.setDescription(request.description());
         event.setType(request.type());
-        event.setStatus(request.status());
         event.setBudget(request.budget());
         event.setMaxGuests(request.maxGuests());
         event.setConcernedNames(request.concernedNames());

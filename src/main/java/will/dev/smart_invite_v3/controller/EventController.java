@@ -122,15 +122,15 @@ public class EventController {
     }
 
     @PutMapping(value = "/{id}/card", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Créer ou mettre à jour la carte d'invitation")
-    public ResponseEntity<ApiResponse<CardResponse>> saveCard(
+    @Operation(summary = "Mettre à jour l'événement et sa carte d'invitation")
+    public ResponseEntity<ApiResponse<EventWithCardResponse>> updateWithCard(
             @PathVariable Long id,
-            @RequestBody InvitationNoteRequest request,
+            @Valid @RequestBody UpdateEventWithCardRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                cardService.saveOrUpdate(id, request, userDetails.getUser().getId()),
-                "Carte sauvegardée"));
+                cardService.updateWithCard(id, request, userDetails.getUser().getId()),
+                "Événement et carte mis à jour"));
     }
 
     @GetMapping(value = "/{id}/card/download", produces = MediaType.APPLICATION_PDF_VALUE)
