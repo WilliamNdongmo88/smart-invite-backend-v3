@@ -11,6 +11,7 @@ import sibModel.SendSmtpEmail;
 import sibModel.SendSmtpEmailAttachment;
 import sibModel.SendSmtpEmailSender;
 import sibModel.SendSmtpEmailTo;
+import will.dev.smart_invite_v3.enums.EventType;
 import will.dev.smart_invite_v3.service.EmailService;
 
 import java.math.BigDecimal;
@@ -97,10 +98,12 @@ public class BrevoEmailServiceImpl implements EmailService {
     }
 
     @Override
-    public void sendRsvpInviteEmail(String toEmail, String guestName, String eventTitle, String rsvpLink) {
+    public void sendRsvpInviteEmail(String toEmail, String guestName, String eventTitle,
+                                    EventType eventType, String rsvpLink) {
+        String prefix = eventType != null ? eventType.invitationPrefix() : "à ";
         String html = emailTemplateService.render(Map.of(
                 "subject",  "Vous êtes invité(e) — " + eventTitle,
-                "title",    "Invitation - " + eventTitle,
+                "title",    "Invitation " + prefix + eventTitle,
                 "content",  "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/>" +
                             "Vous êtes cordialement invité(e) à <strong>" + eventTitle + "</strong>.<br/>" +
                             "Veuillez cliquer sur le bouton ci-dessous pour accepter ou refuser cette invitation.",

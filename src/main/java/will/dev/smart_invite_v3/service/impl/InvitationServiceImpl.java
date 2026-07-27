@@ -310,7 +310,7 @@ public class InvitationServiceImpl implements InvitationService {
             try {
                 emailService.sendRsvpInviteEmail(
                         guest.getEmail(), guest.getFullName(),
-                        event.getTitle(), rsvpLink);
+                        event.getTitle(), event.getType(), rsvpLink);
             } catch (Exception e) {
                 log.warn("Envoi email RSVP échoué pour {} : {}", guest.getEmail(), e.getMessage());
             }
