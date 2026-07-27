@@ -111,14 +111,14 @@ public class EventController {
     // ---- Carte d'invitation ----
 
     @GetMapping("/{id}/card")
-    @Operation(summary = "Récupérer la carte d'invitation")
-    public ResponseEntity<ApiResponse<CardResponse>> getCard(
+    @Operation(summary = "Récupérer l'événement et sa carte d'invitation")
+    public ResponseEntity<ApiResponse<EventWithCardResponse>> getCard(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 cardService.getCard(id, userDetails.getUser().getId()),
-                "Carte récupérée"));
+                "Événement et carte récupérés"));
     }
 
     @PutMapping(value = "/{id}/card", consumes = MediaType.APPLICATION_JSON_VALUE)

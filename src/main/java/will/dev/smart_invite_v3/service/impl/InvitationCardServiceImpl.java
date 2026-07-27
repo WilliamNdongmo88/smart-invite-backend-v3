@@ -133,11 +133,13 @@ public class InvitationCardServiceImpl implements InvitationCardService {
 
     @Override
     @Transactional
-    public CardResponse getCard(Long eventId, Long organizerId) {
-        resolveOwned(eventId, organizerId);
-        return cardRepository.findByEventId(eventId)
-                .map(c -> CardResponse.from(c, eventId))
-                .orElse(emptyCard(eventId));
+    public EventWithCardResponse getCard(Long eventId, Long organizerId) {
+        Event event = resolveOwned(eventId, organizerId);
+        InvitationCard card = cardRepository.findByEventId(eventId).orElse(null);
+        CardResponse cardResponse = card != null
+                ? CardResponse.from(card, eventId)
+                : emptyCard(eventId);
+        return new EventWithCardResponse(EventResponse.from(event), cardResponse);
     }
 
     @Override

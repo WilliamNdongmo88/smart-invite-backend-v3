@@ -15,7 +15,7 @@ public interface InvitationCardService {
 
     CardResponse saveOrUpdate(Long eventId, InvitationNoteRequest request, Long organizerId);
 
-    CardResponse getCard(Long eventId, Long organizerId);
+    EventWithCardResponse getCard(Long eventId, Long organizerId);
 
     byte[] generatePdf(Long eventId, Long organizerId);
 
