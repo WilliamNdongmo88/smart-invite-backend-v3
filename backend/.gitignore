@@ -1,6 +1,6 @@
 HELP.md
 target/
-.mvn/wrapper/maven-wrapper.jar
+backend/.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 
@@ -14,7 +14,7 @@ target/
 .sts4-cache
 
 ### IntelliJ IDEA ###
-.idea
+backend/.idea
 *.iws
 *.iml
 *.ipr
@@ -33,6 +33,6 @@ build/
 .vscode/
 
 # Fichiers sensibles
-src/main/resources/.env
-src/main/resources/application-dev.properties
-src/main/resources/firebase/serviceAccountKey.json
+backend/src/main/resources/.env
+backend/src/main/resources/application-dev.properties
+backend/src/main/resources/firebase/serviceAccountKey.json
