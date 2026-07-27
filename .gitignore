@@ -31,11 +31,14 @@ build/
 
 ### VS Code ###
 .vscode/
+.env
 
 # Fichiers sensibles
 backend/src/main/resources/.env
 backend/src/main/resources/application-dev.properties
 backend/src/main/resources/firebase/serviceAccountKey.json
+
+whatsapp-service/src/.env
 
 .wwebjs_auth/
 .wwebjs_cache/
