@@ -219,7 +219,6 @@
 						<exclude>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok</artifactId>
-                            <optional>true</optional>
 						</exclude>
 					</excludes>
 				</configuration>
@@ -242,7 +241,6 @@
 								<path>
 									<groupId>org.projectlombok</groupId>
 									<artifactId>lombok</artifactId>
-                                    <optional>true</optional>
 								</path>
 								<path>
 									<groupId>org.springframework.boot</groupId>

@@ -312,7 +312,7 @@ public class InvitationServiceImpl implements InvitationService {
                 guest.getNotificationMode(),
                 guest.getEmail(), guest.getPhoneNumber(),
                 guest.getFullName(), event.getTitle(),
-                event.getType(), rsvpLink);
+                event.getType(), rsvpLink, token);
 
         return InvitationResponse.from(invitation);
     }

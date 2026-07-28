@@ -22,7 +22,7 @@ public class NotificationDispatcher {
     public void sendRsvpInvite(NotificationMode mode,
                                String email, String phoneNumber,
                                String guestName, String eventTitle,
-                               EventType eventType, String rsvpLink) {
+                               EventType eventType, String rsvpLink, String token) {
         String prefix = eventType != null ? eventType.invitationPrefix() : "à ";
 
         if (shouldSendEmail(mode) && hasValue(email)) {
@@ -31,7 +31,7 @@ public class NotificationDispatcher {
         }
         if (shouldSendWhatsApp(mode) && hasValue(phoneNumber)) {
             trySend("WhatsApp RSVP", () ->
-                whatsAppService.sendRsvpInviteMessage(phoneNumber, guestName, eventTitle, prefix, rsvpLink));
+                whatsAppService.sendRsvpInviteMessage(phoneNumber, guestName, eventTitle, prefix, token));
         }
     }
 

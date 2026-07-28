@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { client, isReady } = require('../whatsapp');
+const { client, isReady, registerRsvp } = require('../whatsapp');
 
 // Middleware : vérification du secret partagé
 router.use((req, res, next) => {
@@ -13,8 +13,7 @@ router.use((req, res, next) => {
 
 /**
  * POST /send
- * Body: { to: "237XXXXXXXXX", message: "..." }
- * Le numéro doit être au format international sans le +
+ * Body: { to, message }
  */
 router.post('/send', async (req, res) => {
     if (!isReady()) {
@@ -22,12 +21,10 @@ router.post('/send', async (req, res) => {
     }
 
     const { to, message } = req.body;
-
     if (!to || !message) {
         return res.status(400).json({ error: 'Champs "to" et "message" requis' });
     }
 
-    // Normaliser le numéro : retirer +, espaces, tirets
     const normalized = to.replace(/[\s\-\+]/g, '');
     const chatId = `${normalized}@c.us`;
 
@@ -39,6 +36,21 @@ router.post('/send', async (req, res) => {
         console.error(`[WhatsApp] Erreur envoi à ${chatId} :`, err.message);
         res.status(500).json({ error: 'Échec envoi WhatsApp', detail: err.message });
     }
+});
+
+/**
+ * POST /register-rsvp
+ * Body: { phoneNumber, token, guestName, eventTitle }
+ * Enregistre le mapping numéro → token pour intercepter la réponse OUI/NON
+ */
+router.post('/register-rsvp', (req, res) => {
+    const { phoneNumber, token, guestName, eventTitle } = req.body;
+    if (!phoneNumber || !token) {
+        return res.status(400).json({ error: 'Champs "phoneNumber" et "token" requis' });
+    }
+    registerRsvp(phoneNumber, token, guestName, eventTitle);
+    console.log(`[WhatsApp] RSVP enregistré pour ${phoneNumber} → token ${token}`);
+    res.json({ success: true });
 });
 
 module.exports = router;
