@@ -189,8 +189,7 @@ public class InvitationServiceImpl implements InvitationService {
         }
 
         // Génération QR + PDF + envoi confirmation si CONFIRMED
-        if (request.status() == will.dev.smart_invite_v3.enums.RsvpStatus.CONFIRMED
-                && guest.getEmail() != null && !guest.getEmail().isBlank()) {
+        if (request.status() == RsvpStatus.CONFIRMED) {
             checkQuotaAvailable(event.getId());
             try {
                 String folder = activeProfile + "/invitations";
@@ -213,16 +212,16 @@ public class InvitationServiceImpl implements InvitationService {
                 inv.setIsInvitationSent(true);
                 invitationRepository.save(inv);
 
-                // Confirmation selon notificationMode
+                // Confirmation selon notificationMode (email OU whatsapp OU les deux)
                 notificationDispatcher.sendConfirmation(
                         guest.getNotificationMode(),
                         guest.getEmail(), guest.getPhoneNumber(),
-                        guest.getFullName(), event.getTitle(),
+                        guest.getFullName(), event.getType(), event.getTitle(),
                         qrBytes, pdfBytes, qrUrl, pdfUrl);
                 incrementSentInvitations(event.getId());
 
             } catch (Exception e) {
-                log.warn("Génération/envoi confirmation échoué pour {} : {}", guest.getEmail(), e.getMessage());
+                log.warn("Génération/envoi confirmation échoué pour {} : {}", guest.getFullName(), e.getMessage());
             }
         }
 
@@ -284,7 +283,7 @@ public class InvitationServiceImpl implements InvitationService {
             notificationDispatcher.sendConfirmation(
                     guest.getNotificationMode(),
                     guest.getEmail(), guest.getPhoneNumber(),
-                    guest.getFullName(), event.getTitle(),
+                    guest.getFullName(), event.getType(), event.getTitle(),
                     qrBytes, pdfBytes, qrUrl, pdfUrl);
             incrementSentInvitations(event.getId());
         }

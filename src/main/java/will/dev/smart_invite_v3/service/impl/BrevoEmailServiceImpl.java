@@ -105,7 +105,7 @@ public class BrevoEmailServiceImpl implements EmailService {
                 "subject",  "Vous êtes invité(e) — " + eventTitle,
                 "title",    "Invitation " + prefix + eventTitle,
                 "content",  "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/>" +
-                            "Vous êtes cordialement invité(e) à <strong>" + eventTitle + "</strong>.<br/>" +
+                            "Vous êtes cordialement invité(e) " + prefix + "<strong>" + eventTitle + "</strong>.<br/>" +
                             "Veuillez cliquer sur le bouton ci-dessous pour accepter ou refuser cette invitation.",
                 "ctaUrl",   rsvpLink,
                 "ctaLabel", "Répondre à l'invitation"
@@ -114,13 +114,15 @@ public class BrevoEmailServiceImpl implements EmailService {
     }
 
     @Override
-    public void sendConfirmationEmail(String toEmail, String guestName, String eventTitle,
+    public void sendConfirmationEmail(String toEmail, String guestName,
+                                      EventType eventType, String eventTitle,
                                       byte[] qrCodeBytes, byte[] pdfBytes) {
+        String prefix = eventType != null ? eventType.invitationPrefix() : "à ";
         String html = emailTemplateService.render(Map.of(
                 "subject",  "Confirmation de présence — " + eventTitle,
                 "title",    "Merci pour votre confirmation !",
                 "content",  "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/>" +
-                            "Merci d'avoir confirmé votre présence à <strong>" + eventTitle + "</strong>.<br/>" +
+                            "Merci d'avoir confirmé votre présence " + prefix + " <strong>" + eventTitle + "</strong>.<br/>" +
                             "Vous trouverez en pièce jointe votre QR code et votre carte d'invitation.<br/>" +
                             "Présentez votre QR code à l'entrée."
         ));

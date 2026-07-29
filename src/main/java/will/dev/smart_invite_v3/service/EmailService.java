@@ -18,7 +18,8 @@ public interface EmailService {
     void sendRsvpInviteEmail(String toEmail, String guestName, String eventTitle,
                              EventType eventType, String rsvpLink);
 
-    void sendConfirmationEmail(String toEmail, String guestName, String eventTitle,
+    void sendConfirmationEmail(String toEmail, String guestName,
+                               EventType eventType,String eventTitle,
                                byte[] qrCodeBytes, byte[] pdfBytes);
 
     void sendReminderEmail(String toEmail, String guestName, String eventTitle,

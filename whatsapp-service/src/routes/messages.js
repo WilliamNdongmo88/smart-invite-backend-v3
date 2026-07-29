@@ -44,12 +44,12 @@ router.post('/send', async (req, res) => {
  * Enregistre le mapping numéro → token pour intercepter la réponse OUI/NON
  */
 router.post('/register-rsvp', (req, res) => {
-    const { phoneNumber, token, guestName, eventTitle } = req.body;
+    const { phoneNumber, token, guestName, eventTitle, eventType } = req.body;
     if (!phoneNumber || !token) {
         return res.status(400).json({ error: 'Champs "phoneNumber" et "token" requis' });
     }
-    registerRsvp(phoneNumber, token, guestName, eventTitle);
-    console.log(`[WhatsApp] RSVP enregistré pour ${phoneNumber} → token ${token}`);
+    registerRsvp(phoneNumber, token, guestName, eventTitle, eventType);
+    console.log(`[WhatsApp] RSVP enregistré pour ${phoneNumber} → token ${token} (type: ${eventType})`);
     res.json({ success: true });
 });
 

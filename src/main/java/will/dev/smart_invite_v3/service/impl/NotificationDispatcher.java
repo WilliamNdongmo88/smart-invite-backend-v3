@@ -40,12 +40,12 @@ public class NotificationDispatcher {
      */
     public void sendConfirmation(NotificationMode mode,
                                  String email, String phoneNumber,
-                                 String guestName, String eventTitle,
+                                 String guestName, EventType eventType, String eventTitle,
                                  byte[] qrBytes, byte[] pdfBytes,
                                  String qrCodeUrl, String pdfUrl) {
         if (shouldSendEmail(mode) && hasValue(email)) {
             trySend("email confirmation", () ->
-                emailService.sendConfirmationEmail(email, guestName, eventTitle, qrBytes, pdfBytes));
+                emailService.sendConfirmationEmail(email, guestName, eventType, eventTitle, qrBytes, pdfBytes));
         }
         if (shouldSendWhatsApp(mode) && hasValue(phoneNumber)) {
             trySend("WhatsApp confirmation", () ->

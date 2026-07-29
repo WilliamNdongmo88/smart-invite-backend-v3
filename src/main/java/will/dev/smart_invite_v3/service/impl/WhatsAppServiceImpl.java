@@ -27,13 +27,13 @@ public class WhatsAppServiceImpl implements WhatsAppService {
     public void sendRsvpInviteMessage(String phoneNumber, String guestName, String eventTitle,
                                       String eventTypePrefix, String token) {
         // 1. Enregistrer le mapping numéro → token pour intercepter OUI/NON
-        registerRsvp(phoneNumber, token, guestName, eventTitle);
+        registerRsvp(phoneNumber, token, guestName, eventTitle, eventTypePrefix);
 
         // 2. Message décoré façon enveloppe
         String message = String.join("\n",
-            "╔══════════════════════════╗",
-            "       ✉️  *SMART INVITE*       ",
-            "╚══════════════════════════╝",
+            "╔═════════════════════╗",
+            "           ✉️  *SMART INVITE*       ",
+            "╚═════════════════════╝",
             "",
             "🌟 *Vous êtes invité(e) !* 🌟",
             "",
@@ -42,19 +42,19 @@ public class WhatsAppServiceImpl implements WhatsAppService {
             "Nous avons l'immense honneur de vous",
             "convier " + eventTypePrefix + "*" + eventTitle + "*.",
             "",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-            "       📩 *VOTRE RÉPONSE*",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            "━━━━━━━━━━━━━━━━━━━━━━━",
+            "         📩 *VOTRE RÉPONSE*",
+            "━━━━━━━━━━━━━━━━━━━━━━━",
             "",
             "Répondez simplement à ce message :",
             "",
             "  ✅  *OUI*  — Je confirme ma présence",
             "  ❌  *NON*  — Je ne pourrai pas venir",
             "",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            "━━━━━━━━━━━━━━━━━━━━━━",
             "🎊 Votre présence sera un honneur.",
             "Nous espérons vous y voir ! 💫",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            "━━━━━━━━━━━━━━━━━━━━━━"
         );
 
         send(phoneNumber, message);
@@ -64,18 +64,18 @@ public class WhatsAppServiceImpl implements WhatsAppService {
     public void sendConfirmationMessage(String phoneNumber, String guestName, String eventTitle,
                                         String qrCodeUrl, String pdfUrl) {
         String message = String.join("\n",
-            "╔══════════════════════════╗",
-            "       ✉️  *SMART INVITE*       ",
-            "╚══════════════════════════╝",
+            "╔═════════════════════╗",
+            "        ✉️  *SMART INVITE*       ",
+            "╚═════════════════════╝",
             "",
             "🎉 *Confirmation reçue !* 🎉",
             "",
             "Merci *" + guestName + "* d'avoir confirmé",
             "votre présence à *" + eventTitle + "* !",
             "",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-            "       🎫 *VOS DOCUMENTS*",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            "━━━━━━━━━━━━━━━━━━━━━━━━",
+            "   🎫 *VOS DOCUMENTS*",
+            "━━━━━━━━━━━━━━━━━━━━━━━━",
             "",
             "📄 Carte d'invitation :",
             (pdfUrl != null ? pdfUrl : "Disponible prochainement"),
@@ -94,7 +94,8 @@ public class WhatsAppServiceImpl implements WhatsAppService {
         send(phoneNumber, message);
     }
 
-    private void registerRsvp(String phoneNumber, String token, String guestName, String eventTitle) {
+    private void registerRsvp(String phoneNumber, String token, String guestName,
+                               String eventTitle, String eventType) {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -103,9 +104,10 @@ public class WhatsAppServiceImpl implements WhatsAppService {
             HttpEntity<Map<String, String>> entity = new HttpEntity<>(
                 Map.of(
                     "phoneNumber", phoneNumber,
-                    "token", token,
-                    "guestName", guestName,
-                    "eventTitle", eventTitle
+                    "token",       token,
+                    "guestName",   guestName,
+                    "eventTitle",  eventTitle,
+                    "eventType",   eventType != null ? eventType : ""
                 ), headers
             );
 

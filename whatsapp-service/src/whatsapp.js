@@ -1,23 +1,25 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const axios = require('axios');
 
+let isReady = false;
+
 const client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: new LocalAuth({ clientId: 'main' }),
+    webVersionCache: { type: 'local' },
     puppeteer: {
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        headless: process.env.NODE_ENV === 'production' ? true : false,
+        executablePath: process.env.NODE_ENV === 'production' ? '/usr/bin/chromium' : undefined,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-extensions']
     }
 });
-
-let isReady = false;
 
 // Map : numéro normalisé → { token, guestName, eventTitle }
 const pendingRsvp = new Map();
 
-function registerRsvp(phoneNumber, token, guestName, eventTitle) {
+function registerRsvp(phoneNumber, token, guestName, eventTitle, eventType) {
     const normalized = phoneNumber.replace(/[\s\-\+]/g, '');
-    pendingRsvp.set(normalized, { token, guestName, eventTitle });
+    pendingRsvp.set(normalized, { token, guestName, eventTitle, eventType });
 }
 
 client.on('qr', (qr) => {
@@ -25,16 +27,10 @@ client.on('qr', (qr) => {
     qrcode.generate(qr, { small: true });
 });
 
-client.on('ready', () => {
-    isReady = true;
-    console.log('[WhatsApp] Client connecté et prêt.');
-});
-
-client.on('auth_failure', (msg) => {
-    isReady = false;
-    console.error('[WhatsApp] Échec authentification :', msg);
-});
-
+client.on('authenticated', () => console.log('[WhatsApp] Authentifié ✅'));
+client.on('ready', () => { isReady = true; console.log('[WhatsApp] Client connecté et prêt. ✅'); });
+client.on('auth_failure', (msg) => { isReady = false; console.error('[WhatsApp] Échec authentification ❌ :', msg); });
+client.on('loading_screen', (p, m) => console.log('[WhatsApp] ⏳ Chargement :', p, m));
 client.on('disconnected', (reason) => {
     isReady = false;
     console.warn('[WhatsApp] Déconnecté :', reason);
@@ -45,7 +41,8 @@ client.on('disconnected', (reason) => {
 client.on('message', async (msg) => {
     if (msg.fromMe) return;
 
-    const senderNumber = msg.from.replace('@c.us', '');
+    const contact = await msg.getContact();
+    const senderNumber = contact.id._serialized.replace('@c.us', '');
     const text = msg.body.trim().toUpperCase();
 
     if (text !== 'OUI' && text !== 'NON') return;
@@ -53,19 +50,84 @@ client.on('message', async (msg) => {
     const rsvp = pendingRsvp.get(senderNumber);
     if (!rsvp) return;
 
+    console.log('[rsvp] :', rsvp);
     const status = text === 'OUI' ? 'CONFIRMED' : 'DECLINED';
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:8010';
 
+    if (text === 'NON') {
+        try {
+            await axios.post(`${backendUrl}/api/invitations/${rsvp.token}/rsvp`, { status: 'DECLINED' });
+            pendingRsvp.delete(senderNumber);
+            await client.sendMessage(msg.from,
+                `😔 *${rsvp.guestName}*, nous avons bien pris note de votre absence à *${rsvp.eventTitle}*.\nMerci de nous avoir informés.`);
+        } catch (err) {
+            console.error(`[WhatsApp] Erreur DECLINED pour ${senderNumber} :`, err.message);
+        }
+        return;
+    }
+
+    // OUI → appel Spring, récupération des URLs, envoi pièces jointes
     try {
-        await axios.post(`${backendUrl}/api/invitations/${rsvp.token}/rsvp`, { status });
+        // Accusé de réception immédiat
+        //await client.sendMessage(msg.from,
+        //   `✅ *Merci ${rsvp.guestName} !*\n\nVotre présence à l'événement *${rsvp.eventTitle}* a bien été confirmée. 🎉\nPréparation de vos documents en cours...`);
+
+        await client.sendMessage(
+            msg.from,
+            `╔═════════════════════╗
+                ✉️ *SMART INVITE*
+             ╚═════════════════════╝
+
+            🎉 *Confirmation reçue !* 🎉
+
+            Merci *${rsvp.guestName}* d'avoir confirmé votre présence ${rsvp.eventType} *${rsvp.eventTitle}*.
+
+            ━━━━━━━━━━━━━━━━━━━━━
+            🎫 *VOS DOCUMENTS*
+            ━━━━━━━━━━━━━━━━━━━━━`
+        );
+        // Appel Spring RSVP — la réponse contient qrCodeUrl et pdfUrl
+        const response = await axios.post(
+            `${backendUrl}/api/invitations/${rsvp.token}/rsvp`,
+            { status: 'CONFIRMED' }
+        );
+
         pendingRsvp.delete(senderNumber);
 
-        const reply = text === 'OUI'
-            ? `✅ *Merci ${rsvp.guestName} !*\n\nVotre présence à *${rsvp.eventTitle}* a bien été confirmée. 🎉\nVous recevrez votre carte d'invitation et votre QR Code dans quelques instants.`
-            : `😔 *${rsvp.guestName}*, nous avons bien pris note de votre absence à *${rsvp.eventTitle}*.\nMerci de nous avoir informés.`;
+        const data = response.data?.data || response.data;
+        const qrCodeUrl = data?.qrCodeUrl;
+        const pdfUrl    = data?.pdfUrl;
 
-        await client.sendMessage(msg.from, reply);
-        console.log(`[WhatsApp] RSVP ${status} traité pour ${senderNumber}`);
+        // Envoi QR Code en pièce jointe
+        if (qrCodeUrl) {
+            const qrMedia = await MessageMedia.fromUrl(qrCodeUrl, { unsafeMime: true });
+            await client.sendMessage(msg.from, qrMedia, {
+                caption: '📱 *Votre QR Code d\'accès*\nPrésentez-le à l\'entrée de l\'événement.'
+            });
+        }
+
+        // Envoi PDF carte d'invitation en pièce jointe
+        if (pdfUrl) {
+            const pdfMedia = await MessageMedia.fromUrl(pdfUrl, { unsafeMime: true });
+            await client.sendMessage(msg.from, pdfMedia, {
+                caption: '🎫 *Votre carte d\'invitation*'
+            });
+        }
+
+        // Message final
+        await client.sendMessage(msg.from, [
+            '━━━━━━━━━━━━━━━━━━━━━━',
+            '🎊 Nous avons hâte de vous accueillir !',
+            `À très bientôt ${rsvp.eventType} *${rsvp.eventTitle}* 💫`,
+            '━━━━━━━━━━━━━━━━━━━━━━',
+            '',
+            '╔═════════════════════╗',
+                    '🌐 smart-invite.com',
+            '╚═════════════════════╝',
+        ].join('\n'));
+
+        console.log(`[WhatsApp] RSVP CONFIRMED + documents envoyés à ${senderNumber}`);
+
     } catch (err) {
         console.error(`[WhatsApp] Erreur callback RSVP pour ${senderNumber} :`, err.message);
         await client.sendMessage(msg.from,
