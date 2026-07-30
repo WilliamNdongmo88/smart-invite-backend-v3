@@ -45,10 +45,14 @@ client.on('message', async (msg) => {
     const senderNumber = contact.id._serialized.replace('@c.us', '');
     const text = msg.body.trim().toUpperCase();
 
-    if (text !== 'OUI' && text !== 'NON') return;
-
     const rsvp = pendingRsvp.get(senderNumber);
     if (!rsvp) return;
+
+    if (text !== 'OUI' && text !== 'NON') {
+        await client.sendMessage(msg.from,
+            `⚠️ Réponse non reconnue.\n\nVeuillez répondre *exactement* par :\n  ✅ *OUI*  — pour confirmer votre présence\n  ❌ *NON*  — pour décliner l'invitation`);
+        return;
+    }
 
     console.log('[rsvp] :', rsvp);
     const status = text === 'OUI' ? 'CONFIRMED' : 'DECLINED';
@@ -69,8 +73,23 @@ client.on('message', async (msg) => {
     // OUI → appel Spring, récupération des URLs, envoi pièces jointes
     try {
         // Accusé de réception immédiat
-        //await client.sendMessage(msg.from,
-        //   `✅ *Merci ${rsvp.guestName} !*\n\nVotre présence à l'événement *${rsvp.eventTitle}* a bien été confirmée. 🎉\nPréparation de vos documents en cours...`);
+        const message = [
+            "╔═════════════════════╗",
+            "      ✉️ *SMART INVITE*",
+            "╚═════════════════════╝",
+            "",
+            "🎉 *Confirmation reçue !* 🎉",
+            "",
+            `Merci *${rsvp.guestName}* d'avoir confirmé votre présence ${rsvp.eventType} *${rsvp.eventTitle}*.`,
+            "📄 Vos documents (QR Code et carte d'invitation)",
+            "vous seront envoyés dans quelques instants.",
+            "",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "🌐 smart-invite.com",
+            "━━━━━━━━━━━━━━━━━━━━━━"
+        ].join("\n");
+
+        await client.sendMessage(msg.from, message);
 
         // Appel Spring RSVP — la réponse contient qrCodeUrl et pdfUrl
         const response = await axios.post(
