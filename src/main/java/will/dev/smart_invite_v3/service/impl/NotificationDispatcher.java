@@ -42,14 +42,16 @@ public class NotificationDispatcher {
                                  String email, String phoneNumber,
                                  String guestName, EventType eventType, String eventTitle,
                                  byte[] qrBytes, byte[] pdfBytes,
-                                 String qrCodeUrl, String pdfUrl) {
+                                 String qrCodeUrl, String pdfUrl,
+                                 boolean fromLink) {
         if (shouldSendEmail(mode) && hasValue(email)) {
             trySend("email confirmation", () ->
                 emailService.sendConfirmationEmail(email, guestName, eventType, eventTitle, qrBytes, pdfBytes));
         }
         if (shouldSendWhatsApp(mode) && hasValue(phoneNumber)) {
+            String prefix = fromLink && eventType != null ? eventType.invitationPrefix() : null;
             trySend("WhatsApp confirmation", () ->
-                whatsAppService.sendConfirmationMessage(phoneNumber, guestName, eventType.invitationPrefix(), eventTitle, qrBytes, pdfBytes));
+                whatsAppService.sendConfirmationMessage(phoneNumber, guestName, prefix, eventTitle, qrBytes, pdfBytes));
         }
     }
 

@@ -75,17 +75,18 @@ client.on('message', async (msg) => {
         // Accusé de réception immédiat
         const message = [
             "╔═════════════════════╗",
-            "      ✉️ *SMART INVITE*",
+            "               ✉️ *SMART INVITE*",
             "╚═════════════════════╝",
             "",
             "🎉 *Confirmation reçue !* 🎉",
             "",
             `Merci *${rsvp.guestName}* d'avoir confirmé votre présence ${rsvp.eventType} *${rsvp.eventTitle}*.`,
+            "",
             "📄 Vos documents (QR Code et carte d'invitation)",
             "vous seront envoyés dans quelques instants.",
             "",
             "━━━━━━━━━━━━━━━━━━━━━━",
-            "🌐 smart-invite.com",
+            "               🌐 smart-invite.com",
             "━━━━━━━━━━━━━━━━━━━━━━"
         ].join("\n");
 
@@ -99,7 +100,25 @@ client.on('message', async (msg) => {
 
         pendingRsvp.delete(senderNumber);
 
-        // Les fichiers (QR + PDF) sont envoyés par Spring via /api/send-files
+        //const data = response.data?.data || response.data;
+        //const qrCodeUrl = data?.qrCodeUrl;
+        //const pdfUrl    = data?.pdfUrl;
+
+        // Envoi QR Code en pièce jointe
+        //if (qrCodeUrl) {
+        //    const qrMedia = await MessageMedia.fromUrl(qrCodeUrl, { unsafeMime: true });
+        //    await client.sendMessage(msg.from, qrMedia, {
+        //        caption: '📱 *Votre QR Code d\'accès*\nPrésentez-le à l\'entrée de l\'événement.'
+        //    });
+        //}
+
+        // Envoi PDF carte d'invitation en pièce jointe
+        //if (pdfUrl) {
+        //    const pdfMedia = await MessageMedia.fromUrl(pdfUrl, { unsafeMime: true });
+        //    await client.sendMessage(msg.from, pdfMedia, {
+        //        caption: '🎫 *Votre carte d\'invitation*'
+        //    });
+        //}
 
         // Message final
         await client.sendMessage(msg.from, [
@@ -109,7 +128,7 @@ client.on('message', async (msg) => {
             '━━━━━━━━━━━━━━━━━━━━━━',
             '',
             '╔═════════════════════╗',
-                   '🌐 smart-invite.com',
+            '               🌐 smart-invite.com',
             '╚═════════════════════╝',
         ].join('\n'));
 

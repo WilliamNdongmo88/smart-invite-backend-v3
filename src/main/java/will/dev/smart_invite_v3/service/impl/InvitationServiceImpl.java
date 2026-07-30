@@ -218,7 +218,7 @@ public class InvitationServiceImpl implements InvitationService {
                         guest.getNotificationMode(),
                         guest.getEmail(), guest.getPhoneNumber(),
                         guest.getFullName(), event.getType(), event.getTitle(),
-                        qrBytes, pdfBytes, qrUrl, pdfUrl);
+                        qrBytes, pdfBytes, qrUrl, pdfUrl, false);
                 incrementSentInvitations(event.getId());
 
             } catch (Exception e) {
@@ -285,7 +285,7 @@ public class InvitationServiceImpl implements InvitationService {
                     guest.getNotificationMode(),
                     guest.getEmail(), guest.getPhoneNumber(),
                     guest.getFullName(), event.getType(), event.getTitle(),
-                    qrBytes, pdfBytes, qrUrl, pdfUrl);
+                    qrBytes, pdfBytes, qrUrl, pdfUrl, true);
             incrementSentInvitations(event.getId());
         }
 

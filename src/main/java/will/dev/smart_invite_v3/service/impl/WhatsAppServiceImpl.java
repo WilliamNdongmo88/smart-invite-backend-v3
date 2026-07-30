@@ -35,7 +35,7 @@ public class WhatsAppServiceImpl implements WhatsAppService {
         // 2. Message décoré façon enveloppe
         String message = String.join("\n",
             "╔═════════════════════╗",
-            "           ✉️  *SMART INVITE*       ",
+            "                ✉️  *SMART INVITE*       ",
             "╚═════════════════════╝",
             "",
             "🌟 *Vous êtes invité(e) !* 🌟",
@@ -46,7 +46,7 @@ public class WhatsAppServiceImpl implements WhatsAppService {
             "convier " + eventTypePrefix + "*" + eventTitle + "*.",
             "",
             "━━━━━━━━━━━━━━━━━━━━━━━",
-            "         📩 *VOTRE RÉPONSE*",
+            "               📩 *VOTRE RÉPONSE*",
             "━━━━━━━━━━━━━━━━━━━━━━━",
             "",
             "Répondez simplement à ce message :",
@@ -67,23 +67,22 @@ public class WhatsAppServiceImpl implements WhatsAppService {
     public void sendConfirmationMessage(String phoneNumber, String guestName,
                                         String eventTypePrefix, String eventTitle,
                                         byte[] qrBytes, byte[] pdfBytes) {
-        System.out.println("eventTypePrefix:: "+ eventTypePrefix);
-        String message = String.join("\n",
+        String message = eventTypePrefix != null ? String.join("\n",
                 "╔═════════════════════╗",
-                "      ✉️ *SMART INVITE*",
+                "               ✉️ *SMART INVITE*",
                 "╚═════════════════════╝",
                 "",
                 "🎉 *Confirmation reçue !* 🎉",
                 "",
-                "Merci *" + guestName + "* d'avoir confirmé votre présence "+
-                eventTypePrefix + " *" + eventTitle + "*.",
-                "📄 Vos documents (QR Code et carte d'invitation)",
-                "vous seront envoyés dans quelques instants.",
+                "Merci *" + guestName + "* d'avoir confirmé votre présence "
+                + eventTypePrefix + " *" + eventTitle + "*.",
+                "",
+                "📄 Ci-dessous joint vos documents (QR Code et carte d'invitation)",
                 "",
                 "━━━━━━━━━━━━━━━━━━━━━━",
-                "🌐 smart-invite.com",
+                "               🌐 smart-invite.com",
                 "━━━━━━━━━━━━━━━━━━━━━━"
-        );
+        ) : null;
 
         sendFiles(phoneNumber, message, qrBytes, pdfBytes);
     }
