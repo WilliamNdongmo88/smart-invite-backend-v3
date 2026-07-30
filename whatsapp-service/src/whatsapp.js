@@ -72,20 +72,6 @@ client.on('message', async (msg) => {
         //await client.sendMessage(msg.from,
         //   `✅ *Merci ${rsvp.guestName} !*\n\nVotre présence à l'événement *${rsvp.eventTitle}* a bien été confirmée. 🎉\nPréparation de vos documents en cours...`);
 
-        await client.sendMessage(
-            msg.from,
-            `╔═════════════════════╗
-                ✉️ *SMART INVITE*
-             ╚═════════════════════╝
-
-            🎉 *Confirmation reçue !* 🎉
-
-            Merci *${rsvp.guestName}* d'avoir confirmé votre présence ${rsvp.eventType} *${rsvp.eventTitle}*.
-
-            ━━━━━━━━━━━━━━━━━━━━━
-            🎫 *VOS DOCUMENTS*
-            ━━━━━━━━━━━━━━━━━━━━━`
-        );
         // Appel Spring RSVP — la réponse contient qrCodeUrl et pdfUrl
         const response = await axios.post(
             `${backendUrl}/api/invitations/${rsvp.token}/rsvp`,
@@ -122,7 +108,7 @@ client.on('message', async (msg) => {
             '━━━━━━━━━━━━━━━━━━━━━━',
             '',
             '╔═════════════════════╗',
-                    '🌐 smart-invite.com',
+                   '🌐 smart-invite.com',
             '╚═════════════════════╝',
         ].join('\n'));
 

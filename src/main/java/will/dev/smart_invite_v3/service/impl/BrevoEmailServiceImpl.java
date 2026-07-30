@@ -170,13 +170,14 @@ public class BrevoEmailServiceImpl implements EmailService {
 
     @Override
     public void sendRsvpNotification(String organizerEmail, String guestName,
-                                      String eventTitle, String rsvpStatus) {
+                                     EventType eventType, String eventTitle, String rsvpStatus) {
+        String prefix = eventType != null ? eventType.invitationPrefix() : "à ";
         String label = "CONFIRMED".equals(rsvpStatus) ? "confirmé ✅" : "décliné ❌";
         String html = emailTemplateService.render(Map.of(
                 "subject",  "Réponse RSVP — " + eventTitle,
                 "title",    "Réponse RSVP reçue",
                 "content",  "<strong style=\"color:#c9a84c;\">" + guestName + "</strong>" +
-                            " a <strong>" + label + "</strong> sa participation à <strong>" + eventTitle + "</strong>."
+                            " a <strong>" + label + "</strong> sa participation "+ prefix + " <strong>" + eventTitle + "</strong>."
         ));
         sendEmail(organizerEmail, "Réponse RSVP — " + eventTitle, html, List.of());
     }

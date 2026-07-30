@@ -7,8 +7,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import will.dev.smart_invite_v3.enums.EventType;
 import will.dev.smart_invite_v3.service.WhatsAppService;
 
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -61,37 +64,47 @@ public class WhatsAppServiceImpl implements WhatsAppService {
     }
 
     @Override
-    public void sendConfirmationMessage(String phoneNumber, String guestName, String eventTitle,
-                                        String qrCodeUrl, String pdfUrl) {
+    public void sendConfirmationMessage(String phoneNumber, String guestName,
+                                        String eventTypePrefix, String eventTitle,
+                                        byte[] qrBytes, byte[] pdfBytes) {
+        System.out.println("eventTypePrefix:: "+ eventTypePrefix);
         String message = String.join("\n",
-            "╔═════════════════════╗",
-            "        ✉️  *SMART INVITE*       ",
-            "╚═════════════════════╝",
-            "",
-            "🎉 *Confirmation reçue !* 🎉",
-            "",
-            "Merci *" + guestName + "* d'avoir confirmé",
-            "votre présence à *" + eventTitle + "* !",
-            "",
-            "━━━━━━━━━━━━━━━━━━━━━━━━",
-            "   🎫 *VOS DOCUMENTS*",
-            "━━━━━━━━━━━━━━━━━━━━━━━━",
-            "",
-            "📄 Carte d'invitation :",
-            (pdfUrl != null ? pdfUrl : "Disponible prochainement"),
-            "",
-            "📱 QR Code d'accès :",
-            (qrCodeUrl != null ? qrCodeUrl : "Disponible prochainement"),
-            "",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-            "⚠️ Présentez votre QR Code",
-            "   à l'entrée de l'événement.",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-            "",
-            "À très bientôt ! 💫"
+                "╔═════════════════════╗",
+                "      ✉️ *SMART INVITE*",
+                "╚═════════════════════╝",
+                "",
+                "🎉 *Confirmation reçue !* 🎉",
+                "",
+                "Merci *" + guestName + "* d'avoir confirmé votre présence "+
+                eventTypePrefix + " *" + eventTitle + "*.",
+                "📄 Vos documents (QR Code et carte d'invitation)",
+                "vous seront envoyés dans quelques instants.",
+                "",
+                "━━━━━━━━━━━━━━━━━━━━━━",
+                "🌐 smart-invite.com",
+                "━━━━━━━━━━━━━━━━━━━━━━"
         );
 
-        send(phoneNumber, message);
+        sendFiles(phoneNumber, message, qrBytes, pdfBytes);
+    }
+
+    private void sendFiles(String phoneNumber, String message, byte[] qrBytes, byte[] pdfBytes) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("x-api-secret", apiSecret);
+
+            Map<String, String> body = new HashMap<>();
+            body.put("to", phoneNumber);
+            body.put("message", message);
+            if (qrBytes != null) body.put("qrBase64", Base64.getEncoder().encodeToString(qrBytes));
+            if (pdfBytes != null) body.put("pdfBase64", Base64.getEncoder().encodeToString(pdfBytes));
+
+            restTemplate.postForEntity(serviceUrl + "/api/send-files", new HttpEntity<>(body, headers), Void.class);
+            log.info("[WhatsApp] Fichiers envoyés à {}", phoneNumber);
+        } catch (Exception e) {
+            log.warn("[WhatsApp] Échec envoi fichiers à {} : {}", phoneNumber, e.getMessage());
+        }
     }
 
     private void registerRsvp(String phoneNumber, String token, String guestName,

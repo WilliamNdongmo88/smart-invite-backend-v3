@@ -28,7 +28,7 @@ public interface EmailService {
     void sendNewGuestNotification(String organizerEmail, String guestName, String eventTitle);
 
     void sendRsvpNotification(String organizerEmail, String guestName,
-                              String eventTitle, String rsvpStatus);
+                              EventType eventType, String eventTitle, String rsvpStatus);
 
     void sendQuotaReachedNotification(String organizerEmail, String organizerName,
                                       String eventTitle, int paidQuota);

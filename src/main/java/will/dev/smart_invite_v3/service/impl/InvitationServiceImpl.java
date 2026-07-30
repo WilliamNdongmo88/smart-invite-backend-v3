@@ -182,6 +182,7 @@ public class InvitationServiceImpl implements InvitationService {
             emailService.sendRsvpNotification(
                     event.getOrganizer().getEmail(),
                     guest.getFullName(),
+                    event.getType(),
                     event.getTitle(),
                     request.status().name());
         } catch (Exception e) {

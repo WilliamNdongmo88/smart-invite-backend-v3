@@ -49,7 +49,7 @@ public class NotificationDispatcher {
         }
         if (shouldSendWhatsApp(mode) && hasValue(phoneNumber)) {
             trySend("WhatsApp confirmation", () ->
-                whatsAppService.sendConfirmationMessage(phoneNumber, guestName, eventTitle, qrCodeUrl, pdfUrl));
+                whatsAppService.sendConfirmationMessage(phoneNumber, guestName, eventType.invitationPrefix(), eventTitle, qrBytes, pdfBytes));
         }
     }
 
