@@ -106,6 +106,26 @@ public class WhatsAppServiceImpl implements WhatsAppService {
         }
     }
 
+    @Override
+    public void sendNewSubscriberMessage(String adminPhone, String userName, String userEmail, String userPhone) {
+        String message = String.join("\n",
+            "╔═════════════════════╗",
+            "      ✉️ *SMART INVITE*",
+            "╚═════════════════════╝",
+            "",
+            "🎉 *Nouvel abonné inscrit !*",
+            "",
+            "👤 Nom : *" + userName + "*",
+            "📧 Email : *" + userEmail + "*",
+            "📱 Téléphone : *" + (userPhone != null ? userPhone : "Non renseigné") + "*",
+            "",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "🌐 smart-invite.com",
+            "━━━━━━━━━━━━━━━━━━━━━━"
+        );
+        send(adminPhone, message);
+    }
+
     private void registerRsvp(String phoneNumber, String token, String guestName,
                                String eventTitle, String eventType) {
         try {

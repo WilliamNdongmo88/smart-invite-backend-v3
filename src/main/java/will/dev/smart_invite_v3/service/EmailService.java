@@ -32,4 +32,6 @@ public interface EmailService {
 
     void sendQuotaReachedNotification(String organizerEmail, String organizerName,
                                       String eventTitle, int paidQuota);
+
+    void sendNewSubscriberNotification(String userName, String userEmail, String userPhone);
 }

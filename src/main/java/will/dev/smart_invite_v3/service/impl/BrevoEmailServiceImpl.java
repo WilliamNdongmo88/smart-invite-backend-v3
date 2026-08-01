@@ -196,6 +196,19 @@ public class BrevoEmailServiceImpl implements EmailService {
         sendEmail(organizerEmail, "Quota d'invitations atteint — " + eventTitle, html, List.of());
     }
 
+    @Override
+    public void sendNewSubscriberNotification(String userName, String userEmail, String userPhone) {
+        String html = emailTemplateService.render(Map.of(
+                "subject", "Nouvel abonné inscrit sur Smart Invite",
+                "title",   "Nouvel abonné",
+                "content", "Un nouvel utilisateur vient de s'inscrire et d'activer son compte :<br/><br/>" +
+                           "👤 Nom : <strong>" + userName + "</strong><br/>" +
+                           "📧 Email : <strong>" + userEmail + "</strong><br/>" +
+                           "📱 Téléphone : <strong>" + (userPhone != null ? userPhone : "Non renseigné") + "</strong>"
+        ));
+        sendEmail(adminEmail, "Nouvel abonné — " + userName, html, List.of());
+    }
+
     private void sendEmail(String to, String subject, String htmlContent,
                            List<SendSmtpEmailAttachment> attachments) {
         try {

@@ -1,5 +1,6 @@
 package will.dev.smart_invite_v3.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,11 +26,13 @@ import will.dev.smart_invite_v3.repository.UserRepository;
 import will.dev.smart_invite_v3.service.AuthService;
 import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.OtpService;
+import will.dev.smart_invite_v3.service.WhatsAppService;
 import will.dev.smart_invite_v3.constants.RedisKeys;
 import will.dev.smart_invite_v3.config.JwtProperties;
 import will.dev.smart_invite_v3.service.RedisService;
 import java.time.Duration;
 
+import will.dev.smart_invite_v3.enums.NotificationMode;
 import will.dev.smart_invite_v3.exception.UserAlreadyExistsException;
 import will.dev.smart_invite_v3.exception.InvalidOtpException;
 import will.dev.smart_invite_v3.security.CustomUserDetails;
@@ -40,6 +43,7 @@ import will.dev.smart_invite_v3.exception.InvalidResetTokenException;
 import will.dev.smart_invite_v3.exception.InvalidCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -48,6 +52,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final OtpService otpService;
     private final EmailService emailService;
+    private final WhatsAppService whatsAppService;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
@@ -56,6 +61,12 @@ public class AuthServiceImpl implements AuthService {
 
     @Value("${app.env.apiUrl}")
     private String apiUrl;
+
+    @Value("${app.admin.email}")
+    private String adminEmail;
+
+    @Value("${app.admin.phone}")
+    private String adminPhone;
 
     @Override
     @Transactional
@@ -133,10 +144,20 @@ public class AuthServiceImpl implements AuthService {
         /*
          * Suppression OTP Redis après utilisation
          */
-        otpService.deleteOtp(
-                request.email()
-        );
+        otpService.deleteOtp(request.email());
 
+        // Notification admin selon notificationMode du nouvel utilisateur
+        try {
+            NotificationMode mode = user.getNotificationMode();
+            if (mode == NotificationMode.WHATSAPP || mode == NotificationMode.BOTH) {
+                whatsAppService.sendNewSubscriberMessage(adminPhone, user.getName(), user.getEmail(), user.getPhone());
+            }
+            if (mode != NotificationMode.WHATSAPP) {
+                emailService.sendNewSubscriberNotification(user.getName(), user.getEmail(), user.getPhone());
+            }
+        } catch (Exception e) {
+            log.warn("[Auth] Notification admin nouvel abonné échouée : {}", e.getMessage());
+        }
     }
 
     @Override

@@ -9,4 +9,6 @@ public interface WhatsAppService {
 
     void sendConfirmationMessage(String phoneNumber, String guestName, String eventTitle,
                                  String eventTypePrefix, byte[] qrBytes, byte[] pdfBytes);
+
+    void sendNewSubscriberMessage(String adminPhone, String userName, String userEmail, String userPhone);
 }
