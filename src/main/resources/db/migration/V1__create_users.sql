@@ -11,6 +11,12 @@ CREATE TABLE users (
 
     notification_mode VARCHAR(30),
 
+    attendance_notifications BOOLEAN NOT NULL DEFAULT TRUE,
+    thank_notifications      BOOLEAN NOT NULL DEFAULT TRUE,
+    event_reminders          BOOLEAN NOT NULL DEFAULT FALSE,
+    marketing_emails         BOOLEAN NOT NULL DEFAULT FALSE,
+    notify_me                BOOLEAN NOT NULL DEFAULT FALSE,
+
     is_blocked BOOLEAN NOT NULL DEFAULT FALSE,
     is_active BOOLEAN NOT NULL DEFAULT FALSE,
 

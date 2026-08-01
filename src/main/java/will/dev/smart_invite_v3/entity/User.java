@@ -84,6 +84,26 @@ public class User implements UserDetails{
     @Column(columnDefinition = "TEXT")
     private String avatarUrl;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean attendanceNotifications = true;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean thankNotifications = true;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean eventReminders = false;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean marketingEmails = false;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean notifyMe = false;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

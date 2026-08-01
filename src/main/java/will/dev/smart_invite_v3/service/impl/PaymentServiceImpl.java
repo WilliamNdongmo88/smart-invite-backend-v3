@@ -120,6 +120,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         // Notifier l'admin par email (hors transaction pour ne pas bloquer)
         try {
+            System.out.println("----Initialisation d'envoie de la preuve---");
             emailService.sendPaymentProofNotification(
                     payment.getOrganizer().getName(),
                     payment.getEvent().getTitle(),
