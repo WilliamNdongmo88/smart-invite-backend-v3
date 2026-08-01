@@ -11,4 +11,6 @@ public interface WhatsAppService {
                                  String eventTypePrefix, byte[] qrBytes, byte[] pdfBytes);
 
     void sendNewSubscriberMessage(String adminPhone, String userName, String userEmail, String userPhone);
+
+    void sendOrganizerTextMessage(String phoneNumber, String message);
 }

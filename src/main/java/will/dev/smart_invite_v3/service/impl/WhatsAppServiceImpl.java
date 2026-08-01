@@ -126,6 +126,11 @@ public class WhatsAppServiceImpl implements WhatsAppService {
         send(adminPhone, message);
     }
 
+    @Override
+    public void sendOrganizerTextMessage(String phoneNumber, String message) {
+        send(phoneNumber, message);
+    }
+
     private void registerRsvp(String phoneNumber, String token, String guestName,
                                String eventTitle, String eventType) {
         try {

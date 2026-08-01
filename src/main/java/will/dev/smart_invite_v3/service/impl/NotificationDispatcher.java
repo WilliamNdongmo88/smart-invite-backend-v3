@@ -3,6 +3,7 @@ package will.dev.smart_invite_v3.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import will.dev.smart_invite_v3.entity.User;
 import will.dev.smart_invite_v3.enums.EventType;
 import will.dev.smart_invite_v3.enums.NotificationMode;
 import will.dev.smart_invite_v3.service.EmailService;
@@ -52,6 +53,25 @@ public class NotificationDispatcher {
             String prefix = fromLink && eventType != null ? eventType.invitationPrefix() : null;
             trySend("WhatsApp confirmation", () ->
                 whatsAppService.sendConfirmationMessage(phoneNumber, guestName, prefix, eventTitle, qrBytes, pdfBytes));
+        }
+    }
+
+    /**
+     * Envoie une notification à l'organisateur selon son notificationMode et notifyMe.
+     * Si notifyMe est false, aucune notification n'est envoyée.
+     */
+    public void sendOrganizerNotification(User organizer, Runnable emailAction, Runnable whatsAppAction) {
+        if (!Boolean.TRUE.equals(organizer.getNotifyMe())) return;
+
+        NotificationMode mode = organizer.getNotificationMode();
+        String email       = organizer.getEmail();
+        String phoneNumber = organizer.getPhone();
+
+        if (shouldSendEmail(mode) && hasValue(email)) {
+            trySend("email organisateur", emailAction);
+        }
+        if (shouldSendWhatsApp(mode) && hasValue(phoneNumber)) {
+            trySend("WhatsApp organisateur", whatsAppAction);
         }
     }
 

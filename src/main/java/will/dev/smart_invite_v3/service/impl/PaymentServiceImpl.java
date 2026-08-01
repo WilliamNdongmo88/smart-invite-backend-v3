@@ -23,6 +23,7 @@ import will.dev.smart_invite_v3.repository.UserRepository;
 import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.FirebaseStorageService;
 import will.dev.smart_invite_v3.service.PaymentService;
+import will.dev.smart_invite_v3.service.WhatsAppService;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -46,6 +47,8 @@ public class PaymentServiceImpl implements PaymentService {
     private final UserRepository       userRepository;
     private final FirebaseStorageService firebaseStorage;
     private final EmailService         emailService;
+    private final WhatsAppService      whatsAppService;
+    private final NotificationDispatcher notificationDispatcher;
 
     @Override
     public PaymentPlanResponse calculatePlan(int quota) {
@@ -173,17 +176,33 @@ public class PaymentServiceImpl implements PaymentService {
         Payment saved = paymentRepository.save(payment);
 
         try {
-            emailService.sendPaymentReviewNotification(
-                    payment.getOrganizer().getEmail(),
-                    payment.getOrganizer().getName(),
-                    payment.getEvent().getTitle(),
-                    request.approved(),
-                    request.rejectionReason()
+            notificationDispatcher.sendOrganizerNotification(
+                    payment.getOrganizer(),
+                    () -> emailService.sendPaymentReviewNotification(
+                            payment.getOrganizer().getEmail(),
+                            payment.getOrganizer().getName(),
+                            payment.getEvent().getTitle(),
+                            request.approved(),
+                            request.rejectionReason()),
+                    () -> whatsAppService.sendOrganizerTextMessage(
+                            payment.getOrganizer().getPhone(),
+                            buildPaymentReviewMessage(payment.getEvent().getTitle(),
+                                    request.approved(), request.rejectionReason()))
             );
         } catch (Exception e) {
             log.warn("Notification organisateur échouée pour paiement {} : {}", paymentId, e.getMessage());
         }
 
         return PaymentResponse.from(saved);
+    }
+
+    private String buildPaymentReviewMessage(String eventTitle, boolean approved, String rejectionReason) {
+        String status = approved ? "approuvé ✅" : "rejeté ❌";
+        String msg = "💳 *Résultat de votre paiement*\n\n" +
+                "Votre paiement pour *" + eventTitle + "* a été *" + status + "*. ";
+        if (!approved && rejectionReason != null && !rejectionReason.isBlank()) {
+            msg += "\nMotif : _" + rejectionReason + "_";
+        }
+        return msg;
     }
 }

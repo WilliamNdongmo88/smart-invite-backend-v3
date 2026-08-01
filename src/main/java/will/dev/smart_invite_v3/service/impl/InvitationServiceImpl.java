@@ -24,10 +24,11 @@ import will.dev.smart_invite_v3.repository.GuestRepository;
 import will.dev.smart_invite_v3.repository.InvitationCardRepository;
 import will.dev.smart_invite_v3.repository.InvitationRepository;
 import will.dev.smart_invite_v3.repository.PaymentRepository;
-import will.dev.smart_invite_v3.enums.NotificationMode;
 import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.FirebaseStorageService;
 import will.dev.smart_invite_v3.service.InvitationService;
+import will.dev.smart_invite_v3.service.WhatsAppService;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -38,16 +39,17 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class InvitationServiceImpl implements InvitationService {
 
-    private final EventRepository        eventRepository;
-    private final GuestRepository        guestRepository;
-    private final InvitationRepository   invitationRepository;
+    private final EventRepository          eventRepository;
+    private final GuestRepository          guestRepository;
+    private final InvitationRepository     invitationRepository;
     private final InvitationCardRepository cardRepository;
-    private final PaymentRepository      paymentRepository;
-    private final FirebaseStorageService firebaseStorage;
-    private final QrCodeService          qrCodeService;
-    private final PdfCardGeneratorService pdfCardGeneratorService;
-    private final EmailService           emailService;
-    private final NotificationDispatcher  notificationDispatcher;
+    private final PaymentRepository        paymentRepository;
+    private final FirebaseStorageService   firebaseStorage;
+    private final QrCodeService            qrCodeService;
+    private final PdfCardGeneratorService  pdfCardGeneratorService;
+    private final EmailService             emailService;
+    private final WhatsAppService          whatsAppService;
+    private final NotificationDispatcher   notificationDispatcher;
 
     @Value("${app.base.url}")
     private String apiUrl;
@@ -145,8 +147,8 @@ public class InvitationServiceImpl implements InvitationService {
         resolveOwned(inv.getGuest().getEvent().getId(), organizerId);
         deleteFirebaseFiles(inv);
         Guest guest = inv.getGuest();
-        if (guest.getRsvpStatus() == will.dev.smart_invite_v3.enums.RsvpStatus.CONFIRMED) {
-            guest.setRsvpStatus(will.dev.smart_invite_v3.enums.RsvpStatus.PENDING);
+        if (guest.getRsvpStatus() == RsvpStatus.CONFIRMED) {
+            guest.setRsvpStatus(RsvpStatus.PENDING);
             guestRepository.save(guest);
         }
         invitationRepository.delete(inv);
@@ -177,17 +179,19 @@ public class InvitationServiceImpl implements InvitationService {
 
         Event event = guest.getEvent();
 
-        // Notification organisateur
-        try {
-            emailService.sendRsvpNotification(
-                    event.getOrganizer().getEmail(),
-                    guest.getFullName(),
-                    event.getType(),
-                    event.getTitle(),
-                    request.status().name());
-        } catch (Exception e) {
-            log.warn("Notification RSVP organisateur échouée : {}", e.getMessage());
-        }
+        // Notification organisateur selon notifyMe + notificationMode
+        notificationDispatcher.sendOrganizerNotification(
+                event.getOrganizer(),
+                () -> emailService.sendRsvpNotification(
+                        event.getOrganizer().getEmail(),
+                        guest.getFullName(),
+                        event.getType(),
+                        event.getTitle(),
+                        request.status().name()),
+                () -> whatsAppService.sendOrganizerTextMessage(
+                        event.getOrganizer().getPhone(),
+                        buildRsvpWhatsAppMessage(guest.getFullName(), event.getTitle(), request.status().name()))
+        );
 
         // Génération QR + PDF + envoi confirmation si CONFIRMED
         if (request.status() == RsvpStatus.CONFIRMED) {
@@ -196,24 +200,20 @@ public class InvitationServiceImpl implements InvitationService {
                 String folder = activeProfile + "/invitations";
                 String publicUrl = apiUrl + "/api/invitations/" + token;
 
-                // QR Code
                 byte[] qrBytes = qrCodeService.generateWithColor(publicUrl);
                 String qrUrl = firebaseStorage.uploadBytes(qrBytes, folder, token + "_qr.png", "image/png");
 
-                // PDF
                 InvitationCard card = cardRepository.findByEventId(event.getId()).orElse(null);
                 byte[] pdfBytes = buildPdfBytes(event, card, qrBytes, guest.getFullName());
                 String pdfUrl = pdfBytes != null
                         ? firebaseStorage.uploadBytes(pdfBytes, folder, token + "_invitation.pdf", "application/pdf")
                         : null;
 
-                // Mise à jour invitation
                 inv.setQrCodeUrl(qrUrl);
                 inv.setPdfUrl(pdfUrl);
                 inv.setIsInvitationSent(true);
                 invitationRepository.save(inv);
 
-                // Confirmation selon notificationMode (email OU whatsapp OU les deux)
                 notificationDispatcher.sendConfirmation(
                         guest.getNotificationMode(),
                         guest.getEmail(), guest.getPhoneNumber(),
@@ -252,7 +252,6 @@ public class InvitationServiceImpl implements InvitationService {
         String folder = activeProfile + "/invitations";
         String publicUrl = apiUrl + "/api/invitations/" + token;
 
-        // QR Code + PDF générés immédiatement
         byte[] qrBytes = null;
         String qrUrl = null;
         byte[] pdfBytes = null;
@@ -279,7 +278,6 @@ public class InvitationServiceImpl implements InvitationService {
                 .build();
         invitation = invitationRepository.save(invitation);
 
-        // Confirmation selon notificationMode
         if (qrBytes != null) {
             notificationDispatcher.sendConfirmation(
                     guest.getNotificationMode(),
@@ -307,7 +305,6 @@ public class InvitationServiceImpl implements InvitationService {
                 .build();
         invitation = invitationRepository.save(invitation);
 
-        // Envoi lien RSVP selon notificationMode
         notificationDispatcher.sendRsvpInvite(
                 guest.getNotificationMode(),
                 guest.getEmail(), guest.getPhoneNumber(),
@@ -318,14 +315,11 @@ public class InvitationServiceImpl implements InvitationService {
     }
 
     private byte[] buildPdfBytes(Event event, InvitationCard card, byte[] qrBytes, String guestName) {
-        // Si un modèle importé existe, on l'utilise directement
-        if (card != null && Boolean.TRUE.equals(card.getHasInvitationModelCard())
-                && card.getPdfUrl() != null) {
+        if (card != null && Boolean.TRUE.equals(card.getHasInvitationModelCard()) && card.getPdfUrl() != null) {
             byte[] imported = firebaseStorage.downloadBytes(
                     card.getPdfUrl().replace("https://storage.googleapis.com/" + firebaseBucket + "/", ""));
             if (imported != null) return imported;
         }
-        // Sinon génération dynamique
         try {
             return pdfCardGeneratorService.generate(event, card, qrBytes, guestName);
         } catch (Exception e) {
@@ -336,12 +330,8 @@ public class InvitationServiceImpl implements InvitationService {
 
     private void deleteFirebaseFiles(Invitation inv) {
         String base = "https://storage.googleapis.com/" + firebaseBucket + "/";
-        if (inv.getQrCodeUrl() != null) {
-            firebaseStorage.delete(inv.getQrCodeUrl().replace(base, ""));
-        }
-        if (inv.getPdfUrl() != null) {
-            firebaseStorage.delete(inv.getPdfUrl().replace(base, ""));
-        }
+        if (inv.getQrCodeUrl() != null) firebaseStorage.delete(inv.getQrCodeUrl().replace(base, ""));
+        if (inv.getPdfUrl()    != null) firebaseStorage.delete(inv.getPdfUrl().replace(base, ""));
     }
 
     private void checkQuotaAvailable(Long eventId) {
@@ -371,17 +361,39 @@ public class InvitationServiceImpl implements InvitationService {
                 payment.setSentInvitations(payment.getSentInvitations() + 1);
                 paymentRepository.save(payment);
                 if (payment.getSentInvitations().equals(payment.getPaidQuota())) {
-                    try {
-                        emailService.sendQuotaReachedNotification(
-                                payment.getOrganizer().getEmail(),
-                                payment.getOrganizer().getName(),
-                                payment.getEvent().getTitle(),
-                                payment.getPaidQuota());
-                    } catch (Exception e) {
-                        log.warn("Notification quota atteint échouée pour event {} : {}", eventId, e.getMessage());
-                    }
+                    notificationDispatcher.sendOrganizerNotification(
+                            payment.getOrganizer(),
+                            () -> emailService.sendQuotaReachedNotification(
+                                    payment.getOrganizer().getEmail(),
+                                    payment.getOrganizer().getName(),
+                                    payment.getEvent().getTitle(),
+                                    payment.getPaidQuota()),
+                            () -> whatsAppService.sendOrganizerTextMessage(
+                                    payment.getOrganizer().getPhone(),
+                                    "⚠️ *Quota atteint !*\n\nVous avez atteint votre quota de *" +
+                                    payment.getPaidQuota() + " invitations* pour *" +
+                                    payment.getEvent().getTitle() + "*.\n" +
+                                    "Soumettez une nouvelle preuve de paiement pour continuer.")
+                    );
                 }
             });
+    }
+
+    private String buildRsvpWhatsAppMessage(String guestName, String eventTitle, String status) {
+        String label = "CONFIRMED".equals(status) ? "confirmé ✅" : "décliné ❌";
+        return String.join("\n",
+            "╔═════════════════════╗",
+            "      ✉️ *SMART INVITE*",
+            "╚═════════════════════╝",
+            "",
+            "📩 *Réponse RSVP reçue*",
+            "",
+            "*" + guestName + "* a *" + label + "* sa participation à *" + eventTitle + "*.",
+            "",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "🌐 smart-invite.com",
+            "━━━━━━━━━━━━━━━━━━━━━━"
+        );
     }
 
     private Event resolveOwned(Long eventId, Long organizerId) {

@@ -20,6 +20,7 @@ import will.dev.smart_invite_v3.repository.PaymentRepository;
 import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.InvitationService;
 import will.dev.smart_invite_v3.service.LinkService;
+import will.dev.smart_invite_v3.service.WhatsAppService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -35,6 +36,8 @@ public class LinkServiceImpl implements LinkService {
     private final EventRepository   eventRepository;
     private final InvitationService invitationService;
     private final EmailService      emailService;
+    private final WhatsAppService   whatsAppService;
+    private final NotificationDispatcher notificationDispatcher;
     private final PaymentRepository paymentRepository;
 
     @Value("${app.env.apiUrl}")
@@ -105,15 +108,19 @@ public class LinkServiceImpl implements LinkService {
         InvitationResponse invitation = invitationService.generateFromLink(
                 link.getEvent().getId(), request, link.getEvent().getOrganizer().getId());
 
-        // Notification organisateur
-        try {
-            emailService.sendNewGuestNotification(
-                    link.getEvent().getOrganizer().getEmail(),
-                    request.fullName(),
-                    link.getEvent().getTitle());
-        } catch (Exception e) {
-            log.warn("Notification organisateur échouée après inscription via lien : {}", e.getMessage());
-        }
+        // Notification organisateur selon notifyMe + notificationMode
+        notificationDispatcher.sendOrganizerNotification(
+                link.getEvent().getOrganizer(),
+                () -> emailService.sendNewGuestNotification(
+                        link.getEvent().getOrganizer().getEmail(),
+                        request.fullName(),
+                        link.getEvent().getTitle()),
+                () -> whatsAppService.sendOrganizerTextMessage(
+                        link.getEvent().getOrganizer().getPhone(),
+                        "🎉 *Nouvelle inscription !*\n\n*" + request.fullName() +
+                        "* vient de s'inscrire à votre événement *" + link.getEvent().getTitle() + "*."
+                )
+        );
 
         return invitation;
     }
