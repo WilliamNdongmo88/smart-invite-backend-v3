@@ -1,9 +1,10 @@
-INSERT INTO users (name, email, password, role, is_active, is_blocked, created_at, updated_at)
+INSERT INTO users (name, email, password, role,notification_mode, is_active, is_blocked, created_at, updated_at)
 VALUES (
     'williamndongmo',
     'williamndongmo899@gmail.com',
     '$2a$12$eGe7EIZWElhYbQJgDLtB5OvGdAI2L0Pqjryw559n.V7nHXEcsYZdK',
     'ADMIN',
+    'EMAIL',
     TRUE,
     FALSE,
     CURRENT_TIMESTAMP,

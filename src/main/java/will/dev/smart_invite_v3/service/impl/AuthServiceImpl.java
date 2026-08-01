@@ -70,6 +70,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(request.email())
                 .phone(request.phone())
                 .password(passwordEncoder.encode(request.password()))
+                .notificationMode(request.notificationMode())
                 .role(UserRole.USER)
                 .isActive(false)
                 .isBlocked(false)
