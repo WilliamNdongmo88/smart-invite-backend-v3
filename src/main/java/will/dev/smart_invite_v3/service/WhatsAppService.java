@@ -15,4 +15,6 @@ public interface WhatsAppService {
     void sendOrganizerTextMessage(String phoneNumber, String message);
 
     void sendThankYouMessage(String phoneNumber, String guestName, String eventTitle, String eventTypePrefix);
+
+    void sendAgentCredentialsMessage(String phoneNumber, String userName, String password);
 }

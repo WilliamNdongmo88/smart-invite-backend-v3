@@ -83,6 +83,8 @@ public class AuthServiceImpl implements AuthService {
                 .password(passwordEncoder.encode(request.password()))
                 .notificationMode(request.notificationMode())
                 .role(UserRole.USER)
+                .notificationMode(NotificationMode.WHATSAPP)
+                .notifyMe(true)
                 .isActive(false)
                 .isBlocked(false)
                 .build();
@@ -127,9 +129,6 @@ public class AuthServiceImpl implements AuthService {
         /*
          * Recherche utilisateur
          */
-//        User user =
-//                userRepository.findByEmail(request.email())
-//                        .orElseThrow(UserNotFoundException::new);
         User user =
                 userRepository.findByEmail(request.email())
                         .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
@@ -147,8 +146,11 @@ public class AuthServiceImpl implements AuthService {
         otpService.deleteOtp(request.email());
 
         // Notification admin selon notificationMode du nouvel utilisateur
+        User admin =
+                userRepository.findByEmail(adminEmail)
+                        .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
         try {
-            NotificationMode mode = user.getNotificationMode();
+            NotificationMode mode = admin.getNotificationMode();
             if (mode == NotificationMode.WHATSAPP || mode == NotificationMode.BOTH) {
                 whatsAppService.sendNewSubscriberMessage(adminPhone, user.getName(), user.getEmail(), user.getPhone());
             }

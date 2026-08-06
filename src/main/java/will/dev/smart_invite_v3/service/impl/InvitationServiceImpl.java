@@ -274,7 +274,7 @@ public class InvitationServiceImpl implements InvitationService {
                 .token(token)
                 .qrCodeUrl(qrUrl)
                 .pdfUrl(pdfUrl)
-                .status(InvitationStatus.USED)
+                .status(InvitationStatus.ACTIVE)
                 .isInvitationSent(true)
                 .build();
         invitation = invitationRepository.save(invitation);

@@ -132,6 +132,27 @@ public class WhatsAppServiceImpl implements WhatsAppService {
     }
 
     @Override
+    public void sendAgentCredentialsMessage(String phoneNumber, String userName, String password) {
+        String message = String.join("\n",
+            "╔═════════════════════╗",
+            "               ✉️ *SMART INVITE*",
+            "╚═════════════════════╝",
+            "",
+            "🎫 *Compte Agent d'accueil créé !*",
+            "",
+            "Voici vos identifiants de connexion :",
+            "",
+            "👤 Nom d'utilisateur : *" + userName + "*",
+            "🔑 Mot de passe : *" + password + "*",
+            "",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "               🌐 smart-invite.com",
+            "━━━━━━━━━━━━━━━━━━━━━━"
+        );
+        send(phoneNumber, message);
+    }
+
+    @Override
     public void sendThankYouMessage(String phoneNumber, String guestName, String eventTitle, String eventTypePrefix) {
         String message = String.join("\n",
             "╔═════════════════════╗",
