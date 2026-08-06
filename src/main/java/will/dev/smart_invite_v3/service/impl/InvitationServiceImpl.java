@@ -15,6 +15,7 @@ import will.dev.smart_invite_v3.entity.Event;
 import will.dev.smart_invite_v3.entity.Guest;
 import will.dev.smart_invite_v3.entity.Invitation;
 import will.dev.smart_invite_v3.entity.InvitationCard;
+import will.dev.smart_invite_v3.enums.EventType;
 import will.dev.smart_invite_v3.enums.InvitationStatus;
 import will.dev.smart_invite_v3.enums.RsvpStatus;
 import will.dev.smart_invite_v3.exception.EventAccessDeniedException;
@@ -190,7 +191,7 @@ public class InvitationServiceImpl implements InvitationService {
                         request.status().name()),
                 () -> whatsAppService.sendOrganizerTextMessage(
                         event.getOrganizer().getPhone(),
-                        buildRsvpWhatsAppMessage(guest.getFullName(), event.getTitle(), request.status().name()))
+                        buildRsvpWhatsAppMessage(guest.getFullName(), event.getTitle(), event.getType(), request.status().name()))
         );
 
         // Génération QR + PDF + envoi confirmation si CONFIRMED
@@ -379,19 +380,19 @@ public class InvitationServiceImpl implements InvitationService {
             });
     }
 
-    private String buildRsvpWhatsAppMessage(String guestName, String eventTitle, String status) {
+    private String buildRsvpWhatsAppMessage(String guestName, String eventTitle, EventType eventType, String status) {
         String label = "CONFIRMED".equals(status) ? "confirmé ✅" : "décliné ❌";
         return String.join("\n",
             "╔═════════════════════╗",
-            "      ✉️ *SMART INVITE*",
+            "              ✉️ *SMART INVITE*",
             "╚═════════════════════╝",
             "",
             "📩 *Réponse RSVP reçue*",
             "",
-            "*" + guestName + "* a *" + label + "* sa participation à *" + eventTitle + "*.",
+            "*" + guestName + "* a *" + label + "* sa participation "+ eventType.invitationPrefix() +" *" + eventTitle + "*.",
             "",
             "━━━━━━━━━━━━━━━━━━━━━━",
-            "🌐 smart-invite.com",
+            "              🌐 smart-invite.com",
             "━━━━━━━━━━━━━━━━━━━━━━"
         );
     }

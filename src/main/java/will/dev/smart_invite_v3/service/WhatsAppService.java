@@ -13,4 +13,6 @@ public interface WhatsAppService {
     void sendNewSubscriberMessage(String adminPhone, String userName, String userEmail, String userPhone);
 
     void sendOrganizerTextMessage(String phoneNumber, String message);
+
+    void sendThankYouMessage(String phoneNumber, String guestName, String eventTitle, String eventTypePrefix);
 }

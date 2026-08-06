@@ -34,4 +34,6 @@ public interface EmailService {
                                       String eventTitle, int paidQuota);
 
     void sendNewSubscriberNotification(String userName, String userEmail, String userPhone);
+
+    void sendThankYouEmail(String toEmail, String guestName, String eventTitle, EventType eventType);
 }

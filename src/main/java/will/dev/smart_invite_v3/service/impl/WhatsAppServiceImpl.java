@@ -131,6 +131,29 @@ public class WhatsAppServiceImpl implements WhatsAppService {
         send(phoneNumber, message);
     }
 
+    @Override
+    public void sendThankYouMessage(String phoneNumber, String guestName, String eventTitle, String eventTypePrefix) {
+        String message = String.join("\n",
+            "╔═════════════════════╗",
+            "               ✉️ *SMART INVITE*",
+            "╚═════════════════════╝",
+            "",
+            "🙏 *Merci pour votre présence !*",
+            "",
+            "Cher(e) *" + guestName + "*,",
+            "",
+            "Nous vous remercions chaleureusement d'avoir honoré",
+            "de votre présence " + eventTypePrefix + " *" + eventTitle + "*.",
+            "",
+            "Votre présence a rendu cet événement encore plus mémorable. 💫",
+            "",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "               🌐 smart-invite.com",
+            "━━━━━━━━━━━━━━━━━━━━━━"
+        );
+        send(phoneNumber, message);
+    }
+
     private void registerRsvp(String phoneNumber, String token, String guestName,
                                String eventTitle, String eventType) {
         try {

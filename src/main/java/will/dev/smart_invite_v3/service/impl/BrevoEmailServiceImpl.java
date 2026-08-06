@@ -209,6 +209,20 @@ public class BrevoEmailServiceImpl implements EmailService {
         sendEmail(adminEmail, "Nouvel abonné — " + userName, html, List.of());
     }
 
+    @Override
+    public void sendThankYouEmail(String toEmail, String guestName, String eventTitle, EventType eventType) {
+        String prefix = eventType != null ? eventType.invitationPrefix() : "à ";
+        String html = emailTemplateService.render(Map.of(
+                "subject", "Merci pour votre présence — " + eventTitle,
+                "title",   "Merci pour votre présence !",
+                "content", "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/>" +
+                           "Nous tenons à vous remercier chaleureusement d'avoir honoré de votre présence " +
+                           prefix + " <strong>" + eventTitle + "</strong>.<br/>" +
+                           "Votre présence a rendu cet événement encore plus mémorable."
+        ));
+        sendEmail(toEmail, "Merci pour votre présence — " + eventTitle, html, List.of());
+    }
+
     private void sendEmail(String to, String subject, String htmlContent,
                            List<SendSmtpEmailAttachment> attachments) {
         try {

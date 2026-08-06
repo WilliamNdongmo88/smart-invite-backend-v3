@@ -22,6 +22,7 @@ import will.dev.smart_invite_v3.repository.UserRepository;
 import will.dev.smart_invite_v3.service.EventService;
 import will.dev.smart_invite_v3.service.RedisService;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -29,9 +30,10 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class EventServiceImpl implements EventService {
 
-    private final EventRepository eventRepository;
-    private final UserRepository  userRepository;
-    private final RedisService    redisService;
+    private final EventRepository     eventRepository;
+    private final UserRepository      userRepository;
+    private final RedisService        redisService;
+    private final EventScheduleService eventScheduleService;
 
     @Override
     @Transactional
@@ -58,7 +60,9 @@ public class EventServiceImpl implements EventService {
                 .organizer(organizer)
                 .build();
 
-        return EventResponse.from(eventRepository.save(event));
+        Event saved = eventRepository.save(event);
+        eventScheduleService.schedule(saved.getId(), saved.getEventDate());
+        return EventResponse.from(saved);
     }
 
     @Override
@@ -101,7 +105,13 @@ public class EventServiceImpl implements EventService {
         event.setImportMyModelCard(Boolean.TRUE.equals(request.importMyModelCard()));
 
         redisService.delete(CacheKeys.eventStats(id));
-        return EventResponse.from(eventRepository.save(event));
+        Event saved = eventRepository.save(event);
+
+        if (request.eventDate() != null) {
+            eventScheduleService.schedule(saved.getId(), saved.getEventDate());
+        }
+
+        return EventResponse.from(saved);
     }
 
     @Override

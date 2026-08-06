@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +39,7 @@ public class InvitationCardServiceImpl implements InvitationCardService {
     private final UserRepository           userRepository;
     private final PdfCardGeneratorService  pdfGenerator;
     private final FirebaseStorageService   firebaseStorage;
+    private final EventScheduleService     eventScheduleService;
 
     @Value("${spring.profiles.active}")
     private String path;
@@ -73,6 +75,7 @@ public class InvitationCardServiceImpl implements InvitationCardService {
                 .build();
 
         Event savedEvent = eventRepository.save(event);
+        eventScheduleService.schedule(savedEvent.getId(), savedEvent.getEventDate());
 
         // 2. Créer la carte liée
         InvitationNoteRequest note = request.invitationNote();
@@ -89,6 +92,7 @@ public class InvitationCardServiceImpl implements InvitationCardService {
     @Transactional
     public EventWithCardResponse updateWithCard(Long eventId, UpdateEventWithCardRequest request, Long organizerId) {
         Event event = resolveOwned(eventId, organizerId);
+        LocalDateTime previousDate = event.getEventDate();
 
         var ev = request.event();
         event.setTitle(ev.title());
@@ -107,6 +111,10 @@ public class InvitationCardServiceImpl implements InvitationCardService {
         event.setShowWeddingReligiousLocation(Boolean.TRUE.equals(ev.showWeddingReligiousLocation()));
         event.setImportMyModelCard(Boolean.TRUE.equals(ev.importMyModelCard()));
         Event savedEvent = eventRepository.save(event);
+
+        if (ev.eventDate() != null) {
+            eventScheduleService.schedule(savedEvent.getId(), savedEvent.getEventDate());
+        }
 
         InvitationCard card = cardRepository.findByEventId(eventId)
                 .orElseGet(() -> InvitationCard.builder().event(savedEvent).build());
