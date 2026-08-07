@@ -21,12 +21,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import will.dev.smart_invite_v3.entity.Event;
 import will.dev.smart_invite_v3.entity.Guest;
+import will.dev.smart_invite_v3.entity.User;
+import will.dev.smart_invite_v3.enums.NotificationMode;
 import will.dev.smart_invite_v3.enums.RsvpStatus;
 import will.dev.smart_invite_v3.exception.EventNotFoundException;
 import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.GuestRepository;
+import will.dev.smart_invite_v3.repository.UserRepository;
 import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.FirebaseStorageService;
+import will.dev.smart_invite_v3.service.WhatsAppService;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -38,9 +42,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AttendanceReportService {
 
-    private final EventRepository      eventRepository;
-    private final GuestRepository       guestRepository;
-    private final EmailService          emailService;
+    private final EventRepository       eventRepository;
+    private final GuestRepository        guestRepository;
+    private final UserRepository         userRepository;
+    private final EmailService           emailService;
+    private final WhatsAppService        whatsAppService;
     private final FirebaseStorageService firebaseStorage;
 
     @org.springframework.beans.factory.annotation.Value("${spring.profiles.active}")
@@ -58,16 +64,61 @@ public class AttendanceReportService {
 
         log.info("[AttendanceReport] Événement {} — {} présents, {} absents confirmés", eventId, present.size(), noShow.size());
 
-        try {
-            byte[] pdf = generatePdf(event, present, noShow);
-            emailService.sendAttendanceReport(
-                    event.getOrganizer().getEmail(),
-                    event.getOrganizer().getName(),
-                    event.getTitle(), pdf);
-            log.info("[AttendanceReport] Rapport envoyé à {}", event.getOrganizer().getEmail());
-        } catch (Exception e) {
-            log.error("[AttendanceReport] Échec pour l'événement {} : {}", eventId, e.getMessage(), e);
+        User organizer = userRepository.findById(event.getOrganizer().getId())
+                .orElseThrow(() -> new EventNotFoundException(event.getOrganizer().getId()));;
+
+        NotificationMode mode = organizer.getNotificationMode();
+        boolean sendEmail    = mode != NotificationMode.WHATSAPP;
+        boolean sendWhatsApp = mode == NotificationMode.WHATSAPP || mode == NotificationMode.BOTH;
+
+        if (sendEmail && organizer.getEmail() != null) {
+            try {
+                byte[] pdf = generatePdf(event, present, noShow);
+                emailService.sendAttendanceReport(
+                        organizer.getEmail(),
+                        organizer.getName(),
+                        event.getTitle(), pdf);
+                log.info("[AttendanceReport] Rapport PDF envoyé par email à {}", organizer.getEmail());
+            } catch (Exception e) {
+                log.error("[AttendanceReport] Échec email pour l'événement {} : {}", eventId, e.getMessage(), e);
+            }
         }
+        if (sendWhatsApp && organizer.getPhone() != null) {
+            try {
+                whatsAppService.sendOrganizerTextMessage(
+                        organizer.getPhone(),
+                        buildWhatsAppSummary(event, present, noShow));
+                log.info("[AttendanceReport] Résumé WhatsApp envoyé à {}", organizer.getPhone());
+            } catch (Exception e) {
+                log.error("[AttendanceReport] Échec WhatsApp pour l'événement {} : {}", eventId, e.getMessage(), e);
+            }
+        }
+
+    }
+
+    private String buildWhatsAppSummary(Event event, List<Guest> present, List<Guest> noShow) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("╔═════════════════════╗\n")
+          .append("               ✉️ *SMART INVITE*\n")
+          .append("╚═════════════════════╝\n\n")
+          .append("📊 *Rapport de présence*\n\n")
+          .append("🎉 *").append(event.getTitle()).append("*\n");
+        if (event.getEventDate() != null) {
+            sb.append("📅 ").append(event.getEventDate().format(FMT)).append("\n");
+        }
+        sb.append("\n━━━━━━━━━━━━━━━━━━━━━━\n")
+          .append("✅ *Présents : ").append(present.size()).append("*\n");
+        for (Guest g : present) {
+            sb.append("  • ").append(g.getFullName()).append("\n");
+        }
+        sb.append("\n━━━━━━━━━━━━━━━━━━━━━━\n")
+          .append("❌ *Confirmés absents : ").append(noShow.size()).append("*\n");
+        for (Guest g : noShow) {
+            sb.append("  • ").append(g.getFullName()).append("\n");
+        }
+        sb.append("\n━━━━━━━━━━━━━━━━━━━━━━\n")
+          .append("               🌐 smart-invite.com");
+        return sb.toString();
     }
 
     private byte[] generatePdf(Event event, List<Guest> present, List<Guest> noShow) throws IOException {

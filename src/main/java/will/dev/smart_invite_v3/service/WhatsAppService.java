@@ -1,6 +1,6 @@
 package will.dev.smart_invite_v3.service;
 
-import will.dev.smart_invite_v3.enums.EventType;
+import will.dev.smart_invite_v3.entity.ThankYouTemplate;
 
 public interface WhatsAppService {
 
@@ -14,7 +14,8 @@ public interface WhatsAppService {
 
     void sendOrganizerTextMessage(String phoneNumber, String message);
 
-    void sendThankYouMessage(String phoneNumber, String guestName, String eventTitle, String eventTypePrefix);
+    void sendThankYouMessage(String phoneNumber, String guestName, String eventTitle,
+                             String eventTypePrefix, ThankYouTemplate template);
 
     void sendAgentCredentialsMessage(String phoneNumber, String userName, String password);
 }

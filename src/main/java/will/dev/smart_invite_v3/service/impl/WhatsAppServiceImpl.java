@@ -7,7 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import will.dev.smart_invite_v3.enums.EventType;
+import will.dev.smart_invite_v3.entity.ThankYouTemplate;
 import will.dev.smart_invite_v3.service.WhatsAppService;
 
 import java.util.Base64;
@@ -153,24 +153,31 @@ public class WhatsAppServiceImpl implements WhatsAppService {
     }
 
     @Override
-    public void sendThankYouMessage(String phoneNumber, String guestName, String eventTitle, String eventTypePrefix) {
+    public void sendThankYouMessage(String phoneNumber, String guestName,
+                                    String eventTitle, String eventTypePrefix,
+                                    ThankYouTemplate template) {
+        String accroche   = template != null ? template.getAccroche()    : ThankYouTemplate.DEFAULT_ACCROCHE;
+        String corps1     = template != null ? template.getCorpsLigne1() : ThankYouTemplate.DEFAULT_CORPS_1;
+        String corps2     = template != null ? template.getCorpsLigne2() : ThankYouTemplate.DEFAULT_CORPS_2;
+        String conclusion = template != null ? template.getConclusion()  : ThankYouTemplate.DEFAULT_CONCLUSION;
+
         String message = String.join("\n",
-            "╔═════════════════════╗",
-            "               ✉️ *SMART INVITE*",
-            "╚═════════════════════╝",
-            "",
-            "🙏 *Merci pour votre présence !*",
-            "",
-            "Cher(e) *" + guestName + "*,",
-            "",
-            "Nous vous remercions chaleureusement d'avoir honoré",
-            "de votre présence " + eventTypePrefix + " *" + eventTitle + "*.",
-            "",
-            "Votre présence a rendu cet événement encore plus mémorable. 💫",
-            "",
-            "━━━━━━━━━━━━━━━━━━━━━━",
-            "               🌐 smart-invite.com",
-            "━━━━━━━━━━━━━━━━━━━━━━"
+                "╔═════════════════════╗",
+                "               ✉️ *SMART INVITE*",
+                "╚═════════════════════╝",
+                "",
+                accroche,
+                "",
+                "Cher(e) *" + guestName + "*,",
+                "",
+                corps1,
+                corps2,
+                "",
+                conclusion,
+                "",
+                "━━━━━━━━━━━━━━━━━━━━━━",
+                "               🌐 smart-invite.com",
+                "━━━━━━━━━━━━━━━━━━━━━━"
         );
         send(phoneNumber, message);
     }

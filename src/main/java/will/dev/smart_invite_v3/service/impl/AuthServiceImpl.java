@@ -201,6 +201,7 @@ public class AuthServiceImpl implements AuthService {
         /*
          * Vérification compte actif
          */
+        System.out.println("User is active: " + user.getIsActive());
         if (!Boolean.TRUE.equals(user.getIsActive())) {
             throw new AccountNotActivatedException();
         }

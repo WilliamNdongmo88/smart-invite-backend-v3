@@ -1,5 +1,6 @@
 package will.dev.smart_invite_v3.dto.event.response;
 
+import will.dev.smart_invite_v3.entity.ThankYouTemplate;
 import will.dev.smart_invite_v3.entity.Event;
 import will.dev.smart_invite_v3.enums.EventStatus;
 import will.dev.smart_invite_v3.enums.EventType;
@@ -24,6 +25,7 @@ public record EventResponse(
         LocalDateTime banquetDateTime,
         Boolean showWeddingReligiousLocation,
         Boolean importMyModelCard,
+        ThankYouTemplate thankYouTemplate,
         Long organizerId,
         String organizerName,
         LocalDateTime createdAt,
@@ -48,6 +50,7 @@ public record EventResponse(
                 event.getBanquetDateTime(),
                 event.getShowWeddingReligiousLocation(),
                 event.getImportMyModelCard(),
+                event.getThankYouTemplate(),
                 event.getOrganizer().getId(),
                 event.getOrganizer().getName(),
                 event.getCreatedAt(),

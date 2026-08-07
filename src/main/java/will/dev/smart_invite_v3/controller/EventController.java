@@ -133,6 +133,31 @@ public class EventController {
                 "Événement et carte mis à jour"));
     }
 
+    @GetMapping("/{id}/thank-you-message")
+    @Operation(summary = "Récupérer le template du message de remerciement",
+               description = "Retourne les parties personnalisables du message. La salutation (Cher(e) *NomInvité*) est fixe et gérée par le système.")
+    public ResponseEntity<ApiResponse<ThankYouTemplateResponse>> getThankYouTemplate(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                eventService.getThankYouTemplate(id, userDetails.getUser().getId()),
+                "Template récupéré"));
+    }
+
+    @PatchMapping("/{id}/thank-you-message")
+    @Operation(summary = "Personnaliser le message de remerciement",
+               description = "Modifie les parties personnalisables du message envoyé à tous les invités présents après l'événement. Envoyer tous les champs à null pour revenir au message par défaut.")
+    public ResponseEntity<ApiResponse<EventResponse>> updateThankYouMessage(
+            @PathVariable Long id,
+            @Valid @RequestBody ThankYouMessageRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                eventService.updateThankYouMessage(id, request, userDetails.getUser().getId()),
+                "Message de remerciement mis à jour"));
+    }
+
     @GetMapping(value = "/{id}/card/download", produces = MediaType.APPLICATION_PDF_VALUE)
     @Operation(summary = "Télécharger la carte d'invitation en PDF")
     public ResponseEntity<byte[]> downloadCard(

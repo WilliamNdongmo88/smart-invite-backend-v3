@@ -29,6 +29,8 @@ CREATE TABLE events (
     banquet_location TEXT,
     banquet_time TIMESTAMP,
 
+    thank_you_message TEXT,
+
     show_wedding_religious_location BOOLEAN DEFAULT FALSE,
 
     is_model_card BOOLEAN DEFAULT FALSE,

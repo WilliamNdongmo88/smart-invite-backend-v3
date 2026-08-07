@@ -60,7 +60,7 @@ public class ThankYouJobService {
                 try {
                     whatsAppService.sendThankYouMessage(
                             guest.getPhoneNumber(), guest.getFullName(),
-                            event.getTitle(), prefix);
+                            event.getTitle(), prefix, event.getThankYouTemplate());
                 } catch (Exception e) {
                     log.warn("[ThankYouJob] Échec WhatsApp pour {} : {}", guest.getFullName(), e.getMessage());
                 }

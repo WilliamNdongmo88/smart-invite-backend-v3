@@ -9,10 +9,13 @@ import org.springframework.transaction.annotation.Transactional;
 import will.dev.smart_invite_v3.cache.CacheKeys;
 import will.dev.smart_invite_v3.cache.CacheNames;
 import will.dev.smart_invite_v3.dto.event.request.CreateEventRequest;
+import will.dev.smart_invite_v3.dto.event.request.ThankYouMessageRequest;
 import will.dev.smart_invite_v3.dto.event.request.UpdateEventRequest;
 import will.dev.smart_invite_v3.dto.event.response.EventResponse;
 import will.dev.smart_invite_v3.dto.event.response.EventStatsResponse;
+import will.dev.smart_invite_v3.dto.event.response.ThankYouTemplateResponse;
 import will.dev.smart_invite_v3.entity.Event;
+import will.dev.smart_invite_v3.entity.ThankYouTemplate;
 import will.dev.smart_invite_v3.entity.User;
 import will.dev.smart_invite_v3.exception.EventAccessDeniedException;
 import will.dev.smart_invite_v3.exception.EventNotFoundException;
@@ -22,7 +25,6 @@ import will.dev.smart_invite_v3.repository.UserRepository;
 import will.dev.smart_invite_v3.service.EventService;
 import will.dev.smart_invite_v3.service.RedisService;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -30,10 +32,16 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class EventServiceImpl implements EventService {
 
-    private final EventRepository     eventRepository;
-    private final UserRepository      userRepository;
-    private final RedisService        redisService;
+    private final EventRepository      eventRepository;
+    private final UserRepository       userRepository;
+    private final RedisService         redisService;
     private final EventScheduleService eventScheduleService;
+
+    // Valeurs par défaut — utilisées quand aucun template custom n'est défini
+    static final String DEFAULT_ACCROCHE    = ThankYouTemplate.DEFAULT_ACCROCHE;
+    static final String DEFAULT_CORPS_1     = ThankYouTemplate.DEFAULT_CORPS_1;
+    static final String DEFAULT_CORPS_2     = ThankYouTemplate.DEFAULT_CORPS_2;
+    static final String DEFAULT_CONCLUSION  = ThankYouTemplate.DEFAULT_CONCLUSION;
 
     @Override
     @Transactional
@@ -133,6 +141,41 @@ public class EventServiceImpl implements EventService {
                 ? (double) totalGuests / event.getMaxGuests() * 100 : 0;
         return new EventStatsResponse(event.getId(), event.getTitle(),
                 event.getMaxGuests(), totalGuests, confirmed, pending, declined, occupancyRate);
+    }
+
+    @Override
+    public ThankYouTemplateResponse getThankYouTemplate(Long id, Long organizerId) {
+        Event event = resolveOwned(id, organizerId);
+        ThankYouTemplate t = event.getThankYouTemplate();
+        boolean isCustom = t != null;
+        return new ThankYouTemplateResponse(
+                isCustom ? t.getAccroche()    : DEFAULT_ACCROCHE,
+                "Cher(e) *{guestName}*,",     // fixe — le système injecte le vrai nom
+                isCustom ? t.getCorpsLigne1() : DEFAULT_CORPS_1,
+                isCustom ? t.getCorpsLigne2() : DEFAULT_CORPS_2,
+                isCustom ? t.getConclusion()  : DEFAULT_CONCLUSION,
+                isCustom
+        );
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = CacheNames.EVENTS, key = "#id")
+    public EventResponse updateThankYouMessage(Long id, ThankYouMessageRequest request, Long organizerId) {
+        Event event = resolveOwned(id, organizerId);
+        // null sur tous les champs = reset au template par défaut
+        if (request.accroche() == null && request.corpsLigne1() == null
+                && request.corpsLigne2() == null && request.conclusion() == null) {
+            event.setThankYouTemplate(null);
+        } else {
+            event.setThankYouTemplate(ThankYouTemplate.builder()
+                    .accroche(request.accroche()    != null ? request.accroche()    : DEFAULT_ACCROCHE)
+                    .corpsLigne1(request.corpsLigne1() != null ? request.corpsLigne1() : DEFAULT_CORPS_1)
+                    .corpsLigne2(request.corpsLigne2() != null ? request.corpsLigne2() : DEFAULT_CORPS_2)
+                    .conclusion(request.conclusion() != null ? request.conclusion() : DEFAULT_CONCLUSION)
+                    .build());
+        }
+        return EventResponse.from(eventRepository.save(event));
     }
 
     private Event resolveOwned(Long eventId, Long organizerId) {

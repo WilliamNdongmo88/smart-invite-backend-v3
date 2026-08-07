@@ -86,6 +86,10 @@ public class Event {
     @OneToOne(mappedBy = "event", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private InvitationCard invitationCard;
 
+    @Column(name = "thank_you_template", columnDefinition = "JSON")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    private ThankYouTemplate thankYouTemplate;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
