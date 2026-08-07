@@ -21,4 +21,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     int sumApprovedQuotaByEventId(@Param("eventId") Long eventId);
 
     Optional<Payment> findTopByEventIdAndStatusOrderByCreatedAtDesc(Long eventId, PaymentStatus status);
+
+    List<Payment> findAllByEventIdIn(List<Long> eventIds);
 }

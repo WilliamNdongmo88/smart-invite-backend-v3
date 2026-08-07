@@ -74,6 +74,9 @@ public class SecurityConfig {
                         // Liens d'auto-inscription publics (sans auth)
                         .requestMatchers(HttpMethod.POST, "/api/link/join/*").permitAll()
 
+                        // Admin
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
                         // Tout le reste nécessite un JWT
                         .anyRequest().authenticated()
                 )
