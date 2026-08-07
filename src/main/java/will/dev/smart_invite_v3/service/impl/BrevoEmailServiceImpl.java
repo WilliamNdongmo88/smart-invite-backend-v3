@@ -223,6 +223,25 @@ public class BrevoEmailServiceImpl implements EmailService {
         sendEmail(toEmail, "Merci pour votre présence — " + eventTitle, html, List.of());
     }
 
+    @Override
+    public void sendAttendanceReport(String toEmail, String organizerName, String eventTitle, byte[] pdfBytes) {
+        String html = emailTemplateService.render(Map.of(
+                "subject", "Rapport de présence — " + eventTitle,
+                "title",   "Rapport de présence",
+                "content", "Bonjour <strong style=\"color:#c9a84c;\">" + organizerName + "</strong>,<br/>" +
+                           "Veuillez trouver en pièce jointe le rapport de présence de votre événement <strong>" + eventTitle + "</strong>.<br/>" +
+                           "Ce rapport contient la liste des invités présents ainsi que ceux qui avaient confirmé mais ne sont pas venus."
+        ));
+        List<SendSmtpEmailAttachment> attachments = new java.util.ArrayList<>();
+        if (pdfBytes != null) {
+            SendSmtpEmailAttachment attachment = new SendSmtpEmailAttachment();
+            attachment.setContent(pdfBytes);
+            attachment.setName("rapport-presence-" + eventTitle.replaceAll("\\s+", "-").toLowerCase() + ".pdf");
+            attachments.add(attachment);
+        }
+        sendEmail(toEmail, "Rapport de présence — " + eventTitle, html, attachments);
+    }
+
     private void sendEmail(String to, String subject, String htmlContent,
                            List<SendSmtpEmailAttachment> attachments) {
         try {

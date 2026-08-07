@@ -22,6 +22,7 @@ public class EventScheduleService {
     private final EventRepository         eventRepository;
     private final EventScheduleRepository eventScheduleRepository;
     private final ThankYouJobService      thankYouJobService;
+    private final AttendanceReportService attendanceReportService;
 
     /**
      * Crée ou met à jour l'entrée event_schedules pour un événement.
@@ -36,7 +37,7 @@ public class EventScheduleService {
         }
 
         // TEMPORAIRE — pour test
-        LocalDateTime scheduledFor = LocalDateTime.now().plusMinutes(15);
+        LocalDateTime scheduledFor = LocalDateTime.now().plusMinutes(3);
         // LocalDateTime scheduledFor = event.getEventDate().plusDays(1);
 
 
@@ -48,6 +49,7 @@ public class EventScheduleService {
 
         schedule.setScheduledFor(scheduledFor);
         schedule.setExecuted(false);
+        schedule.setIsCheckinExecuted(false);
 
         eventScheduleRepository.save(schedule);
         log.info("[EventSchedule] Job planifié pour l'événement {} à {}", eventId, scheduledFor);
@@ -67,14 +69,30 @@ public class EventScheduleService {
 
         for (EventSchedule schedule : due) {
             Long eventId = schedule.getEvent().getId();
-            try {
-                log.info("[EventSchedule] Exécution job remerciement pour l'événement {}", eventId);
-                thankYouJobService.execute(eventId);
-                schedule.setExecuted(true);
-                eventScheduleRepository.save(schedule);
-            } catch (Exception e) {
-                log.error("[EventSchedule] Échec job pour l'événement {} : {}", eventId, e.getMessage());
+
+            // Job remerciement invités
+            if (!Boolean.TRUE.equals(schedule.getExecuted())) {
+                try {
+                    log.info("[EventSchedule] Exécution job remerciement pour l'événement {}", eventId);
+                    thankYouJobService.execute(eventId);
+                    schedule.setExecuted(true);
+                } catch (Exception e) {
+                    log.error("[EventSchedule] Échec job remerciement pour l'événement {} : {}", eventId, e.getMessage());
+                }
             }
+
+            // Job rapport de présence organisateur
+            if (!Boolean.TRUE.equals(schedule.getIsCheckinExecuted())) {
+                try {
+                    log.info("[EventSchedule] Exécution job rapport présence pour l'événement {}", eventId);
+                    attendanceReportService.execute(eventId);
+                    schedule.setIsCheckinExecuted(true);
+                } catch (Exception e) {
+                    log.error("[EventSchedule] Échec job rapport pour l'événement {} : {}", eventId, e.getMessage());
+                }
+            }
+
+            eventScheduleRepository.save(schedule);
         }
     }
 }

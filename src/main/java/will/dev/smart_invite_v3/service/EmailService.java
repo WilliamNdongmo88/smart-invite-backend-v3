@@ -36,4 +36,6 @@ public interface EmailService {
     void sendNewSubscriberNotification(String userName, String userEmail, String userPhone);
 
     void sendThankYouEmail(String toEmail, String guestName, String eventTitle, EventType eventType);
+
+    void sendAttendanceReport(String toEmail, String organizerName, String eventTitle, byte[] pdfBytes);
 }
