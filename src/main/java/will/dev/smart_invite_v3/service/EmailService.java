@@ -1,6 +1,7 @@
 package will.dev.smart_invite_v3.service;
 
 import java.math.BigDecimal;
+import will.dev.smart_invite_v3.entity.ThankYouTemplate;
 import will.dev.smart_invite_v3.enums.EventType;
 
 public interface EmailService {
@@ -35,7 +36,8 @@ public interface EmailService {
 
     void sendNewSubscriberNotification(String userName, String userEmail, String userPhone);
 
-    void sendThankYouEmail(String toEmail, String guestName, String eventTitle, EventType eventType);
+    void sendThankYouEmail(String toEmail, String guestName, String eventTitle,
+                           EventType eventType, ThankYouTemplate template);
 
     void sendAttendanceReport(String toEmail, String organizerName, String eventTitle, byte[] pdfBytes);
 }

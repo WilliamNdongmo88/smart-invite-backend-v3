@@ -51,7 +51,7 @@ public class ThankYouJobService {
                 try {
                     emailService.sendThankYouEmail(
                             guest.getEmail(), guest.getFullName(),
-                            event.getTitle(), event.getType());
+                            event.getTitle(), event.getType(), event.getThankYouTemplate());
                 } catch (Exception e) {
                     log.warn("[ThankYouJob] Échec email pour {} : {}", guest.getFullName(), e.getMessage());
                 }

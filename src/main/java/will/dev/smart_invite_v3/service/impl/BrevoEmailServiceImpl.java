@@ -11,6 +11,7 @@ import sibModel.SendSmtpEmail;
 import sibModel.SendSmtpEmailAttachment;
 import sibModel.SendSmtpEmailSender;
 import sibModel.SendSmtpEmailTo;
+import will.dev.smart_invite_v3.entity.ThankYouTemplate;
 import will.dev.smart_invite_v3.enums.EventType;
 import will.dev.smart_invite_v3.service.EmailService;
 
@@ -210,15 +211,20 @@ public class BrevoEmailServiceImpl implements EmailService {
     }
 
     @Override
-    public void sendThankYouEmail(String toEmail, String guestName, String eventTitle, EventType eventType) {
-        String prefix = eventType != null ? eventType.invitationPrefix() : "à ";
+    public void sendThankYouEmail(String toEmail, String guestName, String eventTitle,
+                                  EventType eventType, ThankYouTemplate template) {
+        String accroche   = template != null ? template.getAccroche()    : ThankYouTemplate.DEFAULT_ACCROCHE;
+        String corps1     = template != null ? template.getCorpsLigne1() : ThankYouTemplate.DEFAULT_CORPS_1;
+        String corps2     = template != null ? template.getCorpsLigne2() : ThankYouTemplate.DEFAULT_CORPS_2;
+        String conclusion = template != null ? template.getConclusion()  : ThankYouTemplate.DEFAULT_CONCLUSION;
+
         String html = emailTemplateService.render(Map.of(
                 "subject", "Merci pour votre présence — " + eventTitle,
-                "title",   "Merci pour votre présence !",
+                "title",   accroche,
                 "content", "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/>" +
-                           "Nous tenons à vous remercier chaleureusement d'avoir honoré de votre présence " +
-                           prefix + " <strong>" + eventTitle + "</strong>.<br/>" +
-                           "Votre présence a rendu cet événement encore plus mémorable."
+                           corps1 + " <strong>" + eventTitle + "</strong>.<br/>" +
+                           corps2 + "<br/>" +
+                           conclusion
         ));
         sendEmail(toEmail, "Merci pour votre présence — " + eventTitle, html, List.of());
     }
