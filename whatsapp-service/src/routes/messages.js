@@ -63,8 +63,8 @@ router.post('/send-files', async (req, res) => {
         }
 
         if (pdfBase64) {
-            const pdfMedia = new MessageMedia('application/pdf', pdfBase64, 'invitation.pdf');
-            await client.sendMessage(chatId, pdfMedia, { caption: '🎫 *Votre carte d\'invitation*' });
+            const pdfMedia = new MessageMedia('application/pdf', pdfBase64, req.body.pdfFileName || 'invitation.pdf');
+            await client.sendMessage(chatId, pdfMedia, { caption: req.body.pdfCaption || '🎫 *Votre carte d\'invitation*' });
         }
 
         console.log(`[WhatsApp] Fichiers envoyés à ${chatId}`);

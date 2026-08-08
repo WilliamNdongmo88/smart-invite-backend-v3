@@ -71,9 +71,17 @@ public class AttendanceReportService {
         boolean sendEmail    = mode != NotificationMode.WHATSAPP;
         boolean sendWhatsApp = mode == NotificationMode.WHATSAPP || mode == NotificationMode.BOTH;
 
-        if (sendEmail && organizer.getEmail() != null) {
+        byte[] pdf = null;
+        if (sendEmail || sendWhatsApp) {
             try {
-                byte[] pdf = generatePdf(event, present, noShow);
+                pdf = generatePdf(event, present, noShow);
+            } catch (Exception e) {
+                log.error("[AttendanceReport] Échec génération PDF pour l'événement {} : {}", eventId, e.getMessage(), e);
+            }
+        }
+
+        if (sendEmail && organizer.getEmail() != null && pdf != null) {
+            try {
                 emailService.sendAttendanceReport(
                         organizer.getEmail(),
                         organizer.getName(),
@@ -83,42 +91,18 @@ public class AttendanceReportService {
                 log.error("[AttendanceReport] Échec email pour l'événement {} : {}", eventId, e.getMessage(), e);
             }
         }
-        if (sendWhatsApp && organizer.getPhone() != null) {
+        if (sendWhatsApp && organizer.getPhone() != null && pdf != null) {
             try {
-                whatsAppService.sendOrganizerTextMessage(
-                        organizer.getPhone(),
-                        buildWhatsAppSummary(event, present, noShow));
-                log.info("[AttendanceReport] Résumé WhatsApp envoyé à {}", organizer.getPhone());
+                String caption = "📊 *Rapport de présence — " + event.getTitle() + "*\n"
+                        + "✅ Présents : " + present.size() + "  |  "
+                        + "❌ Confirmés absents : " + noShow.size();
+                whatsAppService.sendPdfReport(organizer.getPhone(), caption, pdf);
+                log.info("[AttendanceReport] Rapport PDF envoyé par WhatsApp à {}", organizer.getPhone());
             } catch (Exception e) {
                 log.error("[AttendanceReport] Échec WhatsApp pour l'événement {} : {}", eventId, e.getMessage(), e);
             }
         }
 
-    }
-
-    private String buildWhatsAppSummary(Event event, List<Guest> present, List<Guest> noShow) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("╔═════════════════════╗\n")
-          .append("               ✉️ *SMART INVITE*\n")
-          .append("╚═════════════════════╝\n\n")
-          .append("📊 *Rapport de présence*\n\n")
-          .append("🎉 *").append(event.getTitle()).append("*\n");
-        if (event.getEventDate() != null) {
-            sb.append("📅 ").append(event.getEventDate().format(FMT)).append("\n");
-        }
-        sb.append("\n━━━━━━━━━━━━━━━━━━━━━━\n")
-          .append("✅ *Présents : ").append(present.size()).append("*\n");
-        for (Guest g : present) {
-            sb.append("  • ").append(g.getFullName()).append("\n");
-        }
-        sb.append("\n━━━━━━━━━━━━━━━━━━━━━━\n")
-          .append("❌ *Confirmés absents : ").append(noShow.size()).append("*\n");
-        for (Guest g : noShow) {
-            sb.append("  • ").append(g.getFullName()).append("\n");
-        }
-        sb.append("\n━━━━━━━━━━━━━━━━━━━━━━\n")
-          .append("               🌐 smart-invite.com");
-        return sb.toString();
     }
 
     private byte[] generatePdf(Event event, List<Guest> present, List<Guest> noShow) throws IOException {

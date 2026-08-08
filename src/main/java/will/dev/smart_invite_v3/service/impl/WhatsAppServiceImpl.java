@@ -182,6 +182,27 @@ public class WhatsAppServiceImpl implements WhatsAppService {
         send(phoneNumber, message);
     }
 
+    @Override
+    public void sendPdfReport(String phoneNumber, String caption, byte[] pdfBytes) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("x-api-secret", apiSecret);
+
+            Map<String, String> body = new HashMap<>();
+            body.put("to", phoneNumber);
+            body.put("message", caption);
+            body.put("pdfFileName", "rapport_presence.pdf");
+            body.put("pdfCaption", "📊 *Votre rapport de présence*");
+            if (pdfBytes != null) body.put("pdfBase64", Base64.getEncoder().encodeToString(pdfBytes));
+
+            restTemplate.postForEntity(serviceUrl + "/api/send-files", new HttpEntity<>(body, headers), Void.class);
+            log.info("[WhatsApp] PDF envoyé à {}", phoneNumber);
+        } catch (Exception e) {
+            log.warn("[WhatsApp] Échec envoi PDF à {} : {}", phoneNumber, e.getMessage());
+        }
+    }
+
     private void registerRsvp(String phoneNumber, String token, String guestName,
                                String eventTitle, String eventType) {
         try {

@@ -18,4 +18,6 @@ public interface WhatsAppService {
                              String eventTypePrefix, ThankYouTemplate template);
 
     void sendAgentCredentialsMessage(String phoneNumber, String userName, String password);
+
+    void sendPdfReport(String phoneNumber, String caption, byte[] pdfBytes);
 }

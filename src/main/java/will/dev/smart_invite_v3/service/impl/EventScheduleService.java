@@ -37,7 +37,7 @@ public class EventScheduleService {
         }
 
         // TEMPORAIRE — pour test
-        LocalDateTime scheduledFor = LocalDateTime.now().plusMinutes(3);
+        LocalDateTime scheduledFor = LocalDateTime.now().plusMinutes(2);
         // LocalDateTime scheduledFor = event.getEventDate().plusDays(1);
 
 
