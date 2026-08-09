@@ -106,6 +106,13 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Déconnexion réussie"));
     }
 
+    @PostMapping("/google")
+    public ResponseEntity<ApiResponse<GoogleLoginResponse>> googleLogin(
+            @Valid @RequestBody GoogleLoginRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(authService.googleLogin(request), "OK"));
+    }
+
     @Operation(
             summary = "Mot de passe oublié",
             description = "Envoie un lien de réinitialisation par email (valable 10 min)"

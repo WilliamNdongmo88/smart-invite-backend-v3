@@ -8,10 +8,12 @@ import will.dev.smart_invite_v3.dto.auth.request.RefreshTokenRequest;
 import will.dev.smart_invite_v3.dto.auth.request.RegisterRequest;
 import will.dev.smart_invite_v3.dto.auth.request.ResetPasswordRequest;
 import will.dev.smart_invite_v3.dto.auth.request.VerifyEmailRequest;
+import will.dev.smart_invite_v3.dto.auth.request.GoogleLoginRequest;
 
 import will.dev.smart_invite_v3.dto.auth.response.LoginResponse;
 import will.dev.smart_invite_v3.dto.auth.response.RefreshTokenResponse;
 import will.dev.smart_invite_v3.dto.auth.response.RegisterResponse;
+import will.dev.smart_invite_v3.dto.auth.response.GoogleLoginResponse;
 
 
 public interface AuthService {
@@ -29,5 +31,7 @@ public interface AuthService {
     void forgotPassword(ForgotPasswordRequest request);
 
     void resetPassword(ResetPasswordRequest request);
+
+    GoogleLoginResponse googleLogin(GoogleLoginRequest request);
 
 }

@@ -1,5 +1,9 @@
 package will.dev.smart_invite_v3.service.impl;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.json.jackson2.JacksonFactory;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,8 +16,12 @@ import will.dev.smart_invite_v3.dto.auth.request.RefreshTokenRequest;
 import will.dev.smart_invite_v3.dto.auth.request.LogoutRequest;
 import will.dev.smart_invite_v3.dto.auth.request.ForgotPasswordRequest;
 import will.dev.smart_invite_v3.dto.auth.request.ResetPasswordRequest;
+import will.dev.smart_invite_v3.dto.auth.request.GoogleLoginRequest;
 import will.dev.smart_invite_v3.dto.auth.response.LoginResponse;
 import will.dev.smart_invite_v3.dto.auth.response.RefreshTokenResponse;
+import will.dev.smart_invite_v3.dto.auth.response.GoogleLoginResponse;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseToken;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import will.dev.smart_invite_v3.entity.User;
@@ -30,7 +38,11 @@ import will.dev.smart_invite_v3.service.WhatsAppService;
 import will.dev.smart_invite_v3.constants.RedisKeys;
 import will.dev.smart_invite_v3.config.JwtProperties;
 import will.dev.smart_invite_v3.service.RedisService;
+
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.time.Duration;
+import java.util.Collections;
 
 import will.dev.smart_invite_v3.enums.NotificationMode;
 import will.dev.smart_invite_v3.exception.UserAlreadyExistsException;
@@ -67,6 +79,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Value("${app.admin.phone}")
     private String adminPhone;
+
+    @Value("${app.env.clientId}")
+    private String clientId;
 
     @Override
     @Transactional
@@ -369,6 +384,140 @@ public class AuthServiceImpl implements AuthService {
         );
 
     }
+
+    @Override
+    @Transactional
+    public GoogleLoginResponse googleLogin(GoogleLoginRequest request) {
+
+        // 1. Vérification basique de la requête
+        if (request == null || request.idToken() == null || request.idToken().isBlank()) {
+            throw new RuntimeException("Token Google manquant");
+        }
+
+        try {
+            // 2. Client ID OAuth créé dans Google Cloud
+            final String googleClientId = clientId;
+
+            // 3. Création du vérificateur Google
+            GoogleIdTokenVerifier verifier =
+                    new GoogleIdTokenVerifier.Builder(
+                            GoogleNetHttpTransport.newTrustedTransport(),
+                            JacksonFactory.getDefaultInstance()
+                    )
+                            .setAudience(Collections.singletonList(googleClientId))
+                            .build();
+
+            // 4. Vérification du token Google
+            GoogleIdToken idToken = verifier.verify(request.idToken());
+
+            if (idToken == null) {
+                throw new RuntimeException("Token Google invalide");
+            }
+
+            // 5. Récupération des informations du compte Google
+            GoogleIdToken.Payload payload = idToken.getPayload();
+
+            String googleUserId = payload.getSubject();
+            String email = payload.getEmail();
+            String name = (String) payload.get("name");
+            String picture = (String) payload.get("picture");
+
+            // 6. Vérification de l'email
+            Boolean emailVerified = payload.getEmailVerified();
+
+            if (!Boolean.TRUE.equals(emailVerified)) {
+                throw new RuntimeException("L'adresse email Google n'est pas vérifiée");
+            }
+
+            if (email == null || email.isBlank()) {
+                throw new RuntimeException("Email Google introuvable");
+            }
+
+            // 7. Recherche de l'utilisateur dans ta base
+            return userRepository.findByEmail(email)
+                    .map(user -> {
+
+                        // 8. Compte bloqué
+                        if (Boolean.TRUE.equals(user.getIsBlocked())) {
+                            throw new AccountBlockedException();
+                        }
+
+                        // 9. Compte non activé
+                        if (!Boolean.TRUE.equals(user.getIsActive())) {
+                            throw new AccountNotActivatedException();
+                        }
+
+                        // 10. Génération de ton JWT applicatif
+                        CustomUserDetails userDetails =
+                                new CustomUserDetails(user);
+
+                        String accessToken =
+                                jwtService.generateAccessToken(userDetails);
+
+                        String refreshToken =
+                                jwtService.generateRefreshToken(userDetails);
+
+                        // 11. Sauvegarde du refresh token
+                        refreshTokenService.save(
+                                user.getId(),
+                                refreshToken
+                        );
+
+                        user.setRefreshToken(refreshToken);
+                        userRepository.save(user);
+
+                        // 12. Connexion réussie
+                        return new GoogleLoginResponse(
+                                false,
+                                accessToken,
+                                refreshToken,
+                                jwtProperties.getAccessTokenExpiration(),
+                                null,
+                                null,
+                                null
+                        );
+                    })
+
+                    // 13. Google valide le compte mais l'utilisateur
+                    //     n'existe pas encore dans ta base
+                    .orElseGet(() ->
+                            new GoogleLoginResponse(
+                                    true,
+                                    null,
+                                    null,
+                                    null,
+                                    email,
+                                    name,
+                                    picture
+                            )
+                    );
+
+        } catch (AccountBlockedException e) {
+            throw e;
+
+        } catch (AccountNotActivatedException e) {
+            throw e;
+
+        } catch (GeneralSecurityException e) {
+            throw new RuntimeException(
+                    "Erreur de sécurité lors de la vérification du token Google",
+                    e
+            );
+
+        } catch (IOException e) {
+            throw new RuntimeException(
+                    "Impossible de contacter Google pour vérifier le token",
+                    e
+            );
+
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Token Google invalide",
+                    e
+            );
+        }
+    }
+
 
     @Override
     @Transactional
