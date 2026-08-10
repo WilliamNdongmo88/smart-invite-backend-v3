@@ -53,6 +53,7 @@ import will.dev.smart_invite_v3.exception.AccountNotActivatedException;
 import will.dev.smart_invite_v3.exception.InvalidRefreshTokenException;
 import will.dev.smart_invite_v3.exception.InvalidResetTokenException;
 import will.dev.smart_invite_v3.exception.InvalidCredentialsException;
+import will.dev.smart_invite_v3.exception.UserNotFoundException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
@@ -148,7 +149,7 @@ public class AuthServiceImpl implements AuthService {
          */
         User user =
                 userRepository.findByEmail(request.email())
-                        .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+                        .orElseThrow(UserNotFoundException::new);
 
         /*
          * Activation du compte
@@ -165,7 +166,7 @@ public class AuthServiceImpl implements AuthService {
         // Notification admin selon notificationMode du nouvel utilisateur
         User admin =
                 userRepository.findByEmail(adminEmail)
-                        .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+                        .orElseThrow(UserNotFoundException::new);
         try {
             NotificationMode mode = admin.getNotificationMode();
             if (mode == NotificationMode.WHATSAPP || mode == NotificationMode.BOTH) {
@@ -214,15 +215,8 @@ public class AuthServiceImpl implements AuthService {
                         )
 
                         .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Utilisateur introuvable"
-                                )
+                                UserNotFoundException::new
                         );
-
-        /*
-         * Vérification compte actif
-         */
-        System.out.println("User is active: " + user.getIsActive());
         if (!Boolean.TRUE.equals(user.getIsActive())) {
             throw new AccountNotActivatedException();
         }
@@ -289,9 +283,7 @@ public class AuthServiceImpl implements AuthService {
                 userRepository.findByEmail(email)
 
                         .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Utilisateur introuvable"
-                                )
+                                UserNotFoundException::new
                         );
 
         /*
@@ -335,11 +327,7 @@ public class AuthServiceImpl implements AuthService {
          */
         User user = userRepository.findByEmail(email)
 
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Utilisateur introuvable"
-                        )
-                );
+                .orElseThrow(UserNotFoundException::new);
 
         /*
          * Suppression du Refresh Token dans Redis
@@ -365,11 +353,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(
                         request.email()
                 )
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Utilisateur introuvable"
-                        )
-                );
+                .orElseThrow(UserNotFoundException::new);
 
         String resetToken =
                 jwtService.generateResetPasswordToken(new CustomUserDetails(user));
@@ -396,7 +380,7 @@ public class AuthServiceImpl implements AuthService {
     public void resendOtp(String email) {
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+                .orElseThrow(UserNotFoundException::new);
 
         if (Boolean.TRUE.equals(user.getIsActive())) {
             throw new RuntimeException("Ce compte est déjà activé");
@@ -581,11 +565,7 @@ public class AuthServiceImpl implements AuthService {
          */
         User user = userRepository.findByEmail(email)
 
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Utilisateur introuvable"
-                        )
-                );
+                .orElseThrow(UserNotFoundException::new);
 
         /*
          * Nouveau mot de passe hashé
