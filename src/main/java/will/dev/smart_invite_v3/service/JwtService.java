@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import will.dev.smart_invite_v3.config.JwtProperties;
+import will.dev.smart_invite_v3.entity.User;
+import will.dev.smart_invite_v3.security.CustomUserDetails;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
@@ -26,12 +28,14 @@ public class JwtService {
      */
     public String generateAccessToken(UserDetails userDetails) {
 
-        Map<String,Object> claims = new HashMap<>();
+        Map<String, Object> claims = new HashMap<>();
 
-        claims.put(
-                "type",
-                "ACCESS"
-        );
+        User user = extractUser(userDetails);
+
+        claims.put("type", "ACCESS");
+        claims.put("name", user.getName());
+        claims.put("email", user.getEmail());
+        claims.put("role", user.getRole().name());
 
         return generateToken(
                 claims,
@@ -39,6 +43,15 @@ public class JwtService {
                 jwtProperties.getAccessTokenExpiration()
         );
 
+    }
+
+    private User extractUser(UserDetails userDetails) {
+        if (userDetails instanceof CustomUserDetails customUserDetails) {
+            return customUserDetails.getUser();
+        } else if (userDetails instanceof User user) {
+            return user;
+        }
+        throw new IllegalArgumentException("UserDetails type non supporté : " + userDetails.getClass());
     }
 
     /**
