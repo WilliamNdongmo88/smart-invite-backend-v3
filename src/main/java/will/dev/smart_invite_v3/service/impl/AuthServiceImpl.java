@@ -53,6 +53,8 @@ import will.dev.smart_invite_v3.exception.AccountNotActivatedException;
 import will.dev.smart_invite_v3.exception.InvalidRefreshTokenException;
 import will.dev.smart_invite_v3.exception.InvalidResetTokenException;
 import will.dev.smart_invite_v3.exception.InvalidCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
 
 @Slf4j
@@ -195,6 +197,10 @@ public class AuthServiceImpl implements AuthService {
 
             );
 
+        } catch (DisabledException e) {
+            throw new AccountNotActivatedException();
+        } catch (LockedException e) {
+            throw new AccountBlockedException();
         } catch (AuthenticationException exception) {
             throw new InvalidCredentialsException();
         }
