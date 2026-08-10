@@ -106,6 +106,14 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Déconnexion réussie"));
     }
 
+    @PostMapping("/resend-otp")
+    public ResponseEntity<ApiResponse<Void>> resendOtp(
+            @RequestParam String email
+    ) {
+        authService.resendOtp(email);
+        return ResponseEntity.ok(ApiResponse.success("Code renvoyé avec succès"));
+    }
+
     @PostMapping("/google")
     public ResponseEntity<ApiResponse<GoogleLoginResponse>> googleLogin(
             @Valid @RequestBody GoogleLoginRequest request

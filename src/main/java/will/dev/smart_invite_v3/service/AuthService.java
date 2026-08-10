@@ -32,6 +32,8 @@ public interface AuthService {
 
     void resetPassword(ResetPasswordRequest request);
 
+    void resendOtp(String email);
+
     GoogleLoginResponse googleLogin(GoogleLoginRequest request);
 
 }

@@ -393,6 +393,26 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    public void resendOtp(String email) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        if (Boolean.TRUE.equals(user.getIsActive())) {
+            throw new RuntimeException("Ce compte est déjà activé");
+        }
+
+        String otp = otpService.generateOtp(email);
+
+        try {
+            emailService.sendOtpEmail(email, otp);
+        } catch (Exception e) {
+            throw new RuntimeException("Échec de l'envoi de l'email : " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Transactional
     public GoogleLoginResponse googleLogin(GoogleLoginRequest request) {
 
         // 1. Vérification basique de la requête
