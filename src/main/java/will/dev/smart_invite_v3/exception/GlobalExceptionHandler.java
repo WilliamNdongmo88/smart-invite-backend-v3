@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import will.dev.smart_invite_v3.dto.auth.response.ApiResponse;
 import will.dev.smart_invite_v3.exception.EventNotFoundException;
+import will.dev.smart_invite_v3.exception.ExpiredResetTokenException;
 import will.dev.smart_invite_v3.exception.PaymentException;
 import will.dev.smart_invite_v3.exception.EventAccessDeniedException;
 
@@ -101,6 +102,18 @@ public class GlobalExceptionHandler {
                                 exception.getMessage()
                         )
                 );
+    }
+
+    /**
+     * Lien de réinitialisation expiré
+     */
+    @ExceptionHandler(ExpiredResetTokenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleExpiredResetToken(
+            ExpiredResetTokenException exception
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.GONE)
+                .body(ApiResponse.error(exception.getMessage()));
     }
 
     /**

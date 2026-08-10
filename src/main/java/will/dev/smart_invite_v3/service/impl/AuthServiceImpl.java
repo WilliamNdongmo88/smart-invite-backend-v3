@@ -52,6 +52,7 @@ import will.dev.smart_invite_v3.exception.AccountBlockedException;
 import will.dev.smart_invite_v3.exception.AccountNotActivatedException;
 import will.dev.smart_invite_v3.exception.InvalidRefreshTokenException;
 import will.dev.smart_invite_v3.exception.InvalidResetTokenException;
+import will.dev.smart_invite_v3.exception.ExpiredResetTokenException;
 import will.dev.smart_invite_v3.exception.InvalidCredentialsException;
 import will.dev.smart_invite_v3.exception.UserNotFoundException;
 import org.springframework.security.authentication.DisabledException;
@@ -536,9 +537,12 @@ public class AuthServiceImpl implements AuthService {
         /*
          * Extraction de l'email depuis le JWT
          */
-        String email = jwtService.extractUsername(
-                request.token()
-        );
+        String email;
+        try {
+            email = jwtService.extractUsername(request.token());
+        } catch (Exception e) {
+            throw new ExpiredResetTokenException();
+        }
 
         /*
          * Vérification de l'existence du token dans Redis
@@ -546,12 +550,7 @@ public class AuthServiceImpl implements AuthService {
         String redisKey = RedisKeys.RESET_PASSWORD + email;
 
         String savedToken = redisService.get(redisKey)
-
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Le lien de réinitialisation est expiré."
-                                )
-                        );
+                        .orElseThrow(ExpiredResetTokenException::new);
 
         /*
          * Vérifie que le token reçu est bien celui stocké
