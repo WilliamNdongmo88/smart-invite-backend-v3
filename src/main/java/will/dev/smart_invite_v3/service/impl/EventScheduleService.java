@@ -31,15 +31,14 @@ public class EventScheduleService {
     @Transactional
     public void schedule(Long eventId, LocalDateTime eventDate) {
         try {
-        if (eventDate == null) {
-            log.warn("[EventSchedule] eventDate null pour l'événement {} — schedule ignoré", eventId);
-            return;
-        }
+            if (eventDate == null) {
+                log.warn("[EventSchedule] eventDate null pour l'événement {} — schedule ignoré", eventId);
+                return;
+            }
 
         // TEMPORAIRE — pour test
-        LocalDateTime scheduledFor = LocalDateTime.now().plusMinutes(2);
-        // LocalDateTime scheduledFor = event.getEventDate().plusDays(1);
-
+        // LocalDateTime scheduledFor = LocalDateTime.now().plusMinutes(2);
+        LocalDateTime scheduledFor = eventDate.plusDays(1);
 
             Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventNotFoundException(eventId));

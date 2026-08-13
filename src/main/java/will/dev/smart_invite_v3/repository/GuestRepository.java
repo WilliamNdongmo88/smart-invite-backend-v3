@@ -15,8 +15,8 @@ public interface GuestRepository extends JpaRepository<Guest, Long> {
     List<Guest> findAllByEventId(Long eventId);
 
     @Query("SELECT g FROM Guest g WHERE g.event.id = :eventId " +
-           "AND (:search IS NULL OR LOWER(g.fullName) LIKE LOWER(CONCAT('%',:search,'%')) " +
-           "OR LOWER(g.email) LIKE LOWER(CONCAT('%',:search,'%'))) " +
+           "AND (:search IS NULL OR LOWER(g.fullName) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+           "OR LOWER(COALESCE(g.email,'')) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))) " +
            "AND (:rsvp IS NULL OR g.rsvpStatus = :rsvp)")
     Page<Guest> findByEventIdFiltered(@Param("eventId") Long eventId,
                                       @Param("search") String search,
