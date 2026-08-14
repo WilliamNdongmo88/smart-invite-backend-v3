@@ -21,5 +21,6 @@ public interface WhatsAppService {
 
     void sendPdfReport(String phoneNumber, String caption, byte[] pdfBytes);
 
-    void sendReminderMessage(String phoneNumber, String guestName, String eventTitle);
+    void sendReminderMessage(String phoneNumber, String guestName, String eventTitle,
+                             String token, String eventTypePrefix);
 }

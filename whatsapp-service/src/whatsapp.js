@@ -100,25 +100,33 @@ client.on('message', async (msg) => {
 
         pendingRsvp.delete(senderNumber);
 
-        //const data = response.data?.data || response.data;
-        //const qrCodeUrl = data?.qrCodeUrl;
-        //const pdfUrl    = data?.pdfUrl;
+        const data = response.data?.data || response.data;
+        const qrCodeUrl = data?.qrCodeUrl;
+        const pdfUrl    = data?.pdfUrl;
 
         // Envoi QR Code en pièce jointe
-        //if (qrCodeUrl) {
-        //    const qrMedia = await MessageMedia.fromUrl(qrCodeUrl, { unsafeMime: true });
-        //    await client.sendMessage(msg.from, qrMedia, {
-        //        caption: '📱 *Votre QR Code d\'accès*\nPrésentez-le à l\'entrée de l\'événement.'
-        //    });
-        //}
+        if (qrCodeUrl) {
+            try {
+                const qrMedia = await MessageMedia.fromUrl(qrCodeUrl, { unsafeMime: true });
+                await client.sendMessage(msg.from, qrMedia, {
+                    caption: '📱 *Votre QR Code d\'accès*\nPrésentez-le à l\'entrée de l\'événement.'
+                });
+            } catch (e) {
+                console.warn('[WhatsApp] Échec envoi QR :', e.message);
+            }
+        }
 
         // Envoi PDF carte d'invitation en pièce jointe
-        //if (pdfUrl) {
-        //    const pdfMedia = await MessageMedia.fromUrl(pdfUrl, { unsafeMime: true });
-        //    await client.sendMessage(msg.from, pdfMedia, {
-        //        caption: '🎫 *Votre carte d\'invitation*'
-        //    });
-        //}
+        if (pdfUrl) {
+            try {
+                const pdfMedia = await MessageMedia.fromUrl(pdfUrl, { unsafeMime: true });
+                await client.sendMessage(msg.from, pdfMedia, {
+                    caption: '🎫 *Votre carte d\'invitation*'
+                });
+            } catch (e) {
+                console.warn('[WhatsApp] Échec envoi PDF :', e.message);
+            }
+        }
 
         // Message final
         await client.sendMessage(msg.from, [

@@ -88,7 +88,11 @@ public class WhatsAppServiceImpl implements WhatsAppService {
     }
 
     @Override
-    public void sendReminderMessage(String phoneNumber, String guestName, String eventTitle) {
+    public void sendReminderMessage(String phoneNumber, String guestName, String eventTitle,
+                                    String token, String eventTypePrefix) {
+        // Enregistrer le mapping numéro → token pour intercepter OUI/NON
+        registerRsvp(phoneNumber, token, guestName, eventTitle, eventTypePrefix);
+
         String message = String.join("\n",
             "╔═════════════════════╗",
             "               ✉️ *SMART INVITE*",

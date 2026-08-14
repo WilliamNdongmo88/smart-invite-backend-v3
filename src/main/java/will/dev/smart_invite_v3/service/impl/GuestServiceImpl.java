@@ -135,6 +135,9 @@ public class GuestServiceImpl implements GuestService {
         String phone       = guest.getPhoneNumber();
         String guestName   = guest.getFullName();
         String eventTitle  = guest.getEvent().getTitle();
+        String token       = inv != null ? inv.getToken() : null;
+        String eventPrefix = guest.getEvent().getType() != null
+                ? guest.getEvent().getType().invitationPrefix() : "à ";
 
         boolean sentAny = false;
 
@@ -152,11 +155,15 @@ public class GuestServiceImpl implements GuestService {
         // WHATSAPP ou BOTH
         if ((mode == NotificationMode.WHATSAPP || mode == NotificationMode.BOTH)
                 && phone != null && !phone.isBlank()) {
-            try {
-                whatsAppService.sendReminderMessage(phone, guestName, eventTitle);
-                sentAny = true;
-            } catch (Exception e) {
-                log.warn("Rappel WhatsApp échoué pour guest {} : {}", guestId, e.getMessage());
+            if (token == null) {
+                log.warn("Rappel WhatsApp ignoré pour guest {} : pas d'invitation/token", guestId);
+            } else {
+                try {
+                    whatsAppService.sendReminderMessage(phone, guestName, eventTitle, token, eventPrefix);
+                    sentAny = true;
+                } catch (Exception e) {
+                    log.warn("Rappel WhatsApp échoué pour guest {} : {}", guestId, e.getMessage());
+                }
             }
         }
 
