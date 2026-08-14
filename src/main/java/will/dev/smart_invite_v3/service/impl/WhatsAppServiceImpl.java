@@ -87,6 +87,32 @@ public class WhatsAppServiceImpl implements WhatsAppService {
         sendFiles(phoneNumber, message, qrBytes, pdfBytes);
     }
 
+    @Override
+    public void sendReminderMessage(String phoneNumber, String guestName, String eventTitle) {
+        String message = String.join("\n",
+            "╔═════════════════════╗",
+            "               ✉️ *SMART INVITE*",
+            "╚═════════════════════╝",
+            "",
+            "⏰ *Rappel d'invitation*",
+            "",
+            "Cher(e) *" + guestName + "*,",
+            "",
+            "Nous n'avons pas encore reçu votre réponse",
+            "concernant *" + eventTitle + "*.",
+            "",
+            "Répondez simplement à ce message :",
+            "",
+            "  ✅  *OUI*  — Je confirme ma présence",
+            "  ❌  *NON*  — Je ne pourrai pas venir",
+            "",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "               🌐 smart-invite.com",
+            "━━━━━━━━━━━━━━━━━━━━━━"
+        );
+        send(phoneNumber, message);
+    }
+
     private void sendFiles(String phoneNumber, String message, byte[] qrBytes, byte[] pdfBytes) {
         try {
             HttpHeaders headers = new HttpHeaders();

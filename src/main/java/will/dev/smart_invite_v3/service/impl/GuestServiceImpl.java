@@ -20,8 +20,10 @@ import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.GuestRepository;
 import will.dev.smart_invite_v3.repository.InvitationRepository;
 import will.dev.smart_invite_v3.repository.PaymentRepository;
+import will.dev.smart_invite_v3.enums.NotificationMode;
 import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.GuestService;
+import will.dev.smart_invite_v3.service.WhatsAppService;
 
 @Slf4j
 @Service
@@ -34,6 +36,7 @@ public class GuestServiceImpl implements GuestService {
     private final InvitationRepository invitationRepository;
     private final PaymentRepository    paymentRepository;
     private final EmailService         emailService;
+    private final WhatsAppService      whatsAppService;
 
     // ---- US-015 ----
 
@@ -127,17 +130,39 @@ public class GuestServiceImpl implements GuestService {
         String qrUrl  = inv != null ? inv.getQrCodeUrl() : null;
         String pdfUrl = inv != null ? inv.getPdfUrl()    : null;
 
-        if (guest.getEmail() != null && !guest.getEmail().isBlank()) {
+        NotificationMode mode = guest.getNotificationMode();
+        String email       = guest.getEmail();
+        String phone       = guest.getPhoneNumber();
+        String guestName   = guest.getFullName();
+        String eventTitle  = guest.getEvent().getTitle();
+
+        boolean sentAny = false;
+
+        // EMAIL ou BOTH
+        if ((mode == NotificationMode.EMAIL || mode == NotificationMode.BOTH || mode == null)
+                && email != null && !email.isBlank()) {
             try {
-                emailService.sendReminderEmail(
-                        guest.getEmail(), guest.getFullName(),
-                        guest.getEvent().getTitle(), qrUrl, pdfUrl);
+                emailService.sendReminderEmail(email, guestName, eventTitle, qrUrl, pdfUrl);
+                sentAny = true;
             } catch (Exception e) {
                 log.warn("Rappel email échoué pour guest {} : {}", guestId, e.getMessage());
-                throw new RuntimeException("Échec de l'envoi du rappel : " + e.getMessage());
             }
-        } else {
-            throw new RuntimeException("Cet invité n'a pas d'email renseigné");
+        }
+
+        // WHATSAPP ou BOTH
+        if ((mode == NotificationMode.WHATSAPP || mode == NotificationMode.BOTH)
+                && phone != null && !phone.isBlank()) {
+            try {
+                whatsAppService.sendReminderMessage(phone, guestName, eventTitle);
+                sentAny = true;
+            } catch (Exception e) {
+                log.warn("Rappel WhatsApp échoué pour guest {} : {}", guestId, e.getMessage());
+            }
+        }
+
+        if (!sentAny) {
+            throw new RuntimeException(
+                "Impossible d'envoyer le rappel : aucun contact valide pour le mode " + mode);
         }
     }
 

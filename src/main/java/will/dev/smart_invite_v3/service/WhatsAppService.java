@@ -20,4 +20,6 @@ public interface WhatsAppService {
     void sendAgentCredentialsMessage(String phoneNumber, String userName, String password);
 
     void sendPdfReport(String phoneNumber, String caption, byte[] pdfBytes);
+
+    void sendReminderMessage(String phoneNumber, String guestName, String eventTitle);
 }
