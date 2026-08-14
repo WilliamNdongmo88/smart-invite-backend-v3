@@ -212,6 +212,16 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Erreurs métier (doublons, quota, règles métier)
+     */
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    /**
      * Ressource Spring MVC introuvable (ex: redirect Swagger)
      * → laisser Spring gérer nativement avec 404
      */
@@ -221,10 +231,22 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Exception générale non prévue
+     * Exception générale — unwrap la cause pour exposer les messages métier
+     * wrappés par Spring Transaction / JPA
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGlobalException(Exception exception) {
+        Throwable cause = exception;
+        while (cause.getCause() != null) {
+            cause = cause.getCause();
+            if (cause instanceof RuntimeException
+                    && cause.getMessage() != null
+                    && !cause.getMessage().isBlank()) {
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(ApiResponse.error(cause.getMessage()));
+            }
+        }
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("Une erreur interne est survenue"));
