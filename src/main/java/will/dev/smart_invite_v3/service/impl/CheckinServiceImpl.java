@@ -2,15 +2,17 @@ package will.dev.smart_invite_v3.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import will.dev.smart_invite_v3.dto.checkin.request.CreateAgentRequest;
+import will.dev.smart_invite_v3.dto.checkin.request.UpdateSoundRequest;
 import will.dev.smart_invite_v3.dto.checkin.response.AgentResponse;
+import will.dev.smart_invite_v3.dto.checkin.response.CheckinParametersResponse;
 import will.dev.smart_invite_v3.dto.checkin.response.ScanResponse;
 import will.dev.smart_invite_v3.entity.Checkin;
 import will.dev.smart_invite_v3.entity.CheckinAgent;
+import will.dev.smart_invite_v3.entity.CheckinParameters;
 import will.dev.smart_invite_v3.entity.Invitation;
 import will.dev.smart_invite_v3.entity.User;
 import will.dev.smart_invite_v3.enums.InvitationStatus;
@@ -20,7 +22,9 @@ import will.dev.smart_invite_v3.enums.ScanResult;
 import will.dev.smart_invite_v3.enums.UserRole;
 import will.dev.smart_invite_v3.exception.UserNotFoundException;
 import will.dev.smart_invite_v3.repository.CheckinAgentRepository;
+import will.dev.smart_invite_v3.repository.CheckinParametersRepository;
 import will.dev.smart_invite_v3.repository.CheckinRepository;
+import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.GuestRepository;
 import will.dev.smart_invite_v3.repository.InvitationRepository;
 import will.dev.smart_invite_v3.repository.UserRepository;
@@ -30,15 +34,18 @@ import will.dev.smart_invite_v3.service.WhatsAppService;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CheckinServiceImpl implements CheckinService {
 
-    private final UserRepository         userRepository;
-    private final CheckinAgentRepository  agentRepository;
-    private final InvitationRepository    invitationRepository;
-    private final GuestRepository         guestRepository;
-    private final CheckinRepository       checkinRepository;
-    private final PasswordEncoder         passwordEncoder;
-    private final WhatsAppService         whatsAppService;
+    private final UserRepository              userRepository;
+    private final CheckinAgentRepository      agentRepository;
+    private final InvitationRepository        invitationRepository;
+    private final GuestRepository             guestRepository;
+    private final CheckinRepository           checkinRepository;
+    private final CheckinParametersRepository parametersRepository;
+    private final EventRepository             eventRepository;
+    private final PasswordEncoder             passwordEncoder;
+    private final WhatsAppService             whatsAppService;
 
     @Override
     @Transactional
@@ -46,10 +53,7 @@ public class CheckinServiceImpl implements CheckinService {
         User organizer = userRepository.findById(organizerId)
                 .orElseThrow(() -> new UserNotFoundException("Organisateur introuvable"));
 
-        // Le mot de passe = numéro sans le "+"
         String rawPassword = request.whatsapp().replaceAll("\\+", "");
-
-        // Email fictif unique basé sur le userName
         String email = request.userName().toLowerCase() + "@agent.smartinvite.local";
 
         if (userRepository.existsByEmail(email)) {
@@ -68,15 +72,8 @@ public class CheckinServiceImpl implements CheckinService {
                 .build();
 
         User savedUser = userRepository.save(agentUser);
+        agentRepository.save(CheckinAgent.builder().user(savedUser).organizer(organizer).build());
 
-        CheckinAgent agent = CheckinAgent.builder()
-                .user(savedUser)
-                .organizer(organizer)
-                .build();
-
-        agentRepository.save(agent);
-
-        // Envoi des identifiants par WhatsApp
         try {
             whatsAppService.sendAgentCredentialsMessage(request.whatsapp(), email, rawPassword);
         } catch (Exception e) {
@@ -89,40 +86,37 @@ public class CheckinServiceImpl implements CheckinService {
     @Override
     @Transactional
     public ScanResponse scan(String token, Long agentUserId) {
-        // Vérifier que l'agent existe
         CheckinAgent agent = agentRepository.findByUserId(agentUserId)
                 .orElseThrow(() -> new UserNotFoundException("Agent introuvable"));
 
-        // Chercher l'invitation par token
         Invitation invitation = invitationRepository.findByToken(token).orElse(null);
 
         if (invitation == null) {
             return new ScanResponse(ScanResult.INVALID, null, null, null, "QR Code invalide");
         }
 
-        // Vérifier que l'invitation appartient à un événement de l'organisateur de l'agent
         Long eventOrganizerId = invitation.getEvent().getOrganizer().getId();
         if (!eventOrganizerId.equals(agent.getOrganizer().getId())) {
             return new ScanResponse(ScanResult.INVALID, null, null, null, "QR Code invalide pour cet événement");
         }
 
-        String guestName    = invitation.getGuest().getFullName();
-        String eventTitle   = invitation.getEvent().getTitle();
+        String  guestName   = invitation.getGuest().getFullName();
+        String  eventTitle  = invitation.getEvent().getTitle();
         Integer tableNumber = invitation.getGuest().getTableNumber();
+        Long    eventId     = invitation.getEvent().getId();
 
-        // Déjà un checkin VALID → DUPLICATE
         boolean alreadyCheckedIn = checkinRepository
                 .existsByInvitationIdAndScanStatus(invitation.getId(), ScanResult.VALID);
         if (alreadyCheckedIn) {
+            updateCounters(eventId, ScanResult.DUPLICATE);
             return new ScanResponse(ScanResult.DUPLICATE, guestName, eventTitle, tableNumber, "Invité déjà enregistré");
         }
 
-        // REVOKED ou USED → EXPIRED
         if (invitation.getStatus() != InvitationStatus.ACTIVE) {
+            updateCounters(eventId, ScanResult.EXPIRED);
             return new ScanResponse(ScanResult.EXPIRED, guestName, eventTitle, tableNumber, "Invitation expirée ou révoquée");
         }
 
-        // VALID — mise à jour statut
         invitation.getGuest().setRsvpStatus(RsvpStatus.PRESENT);
         invitation.setStatus(InvitationStatus.USED);
         guestRepository.save(invitation.getGuest());
@@ -137,8 +131,68 @@ public class CheckinServiceImpl implements CheckinService {
                 .checkinTime(java.time.LocalDateTime.now())
                 .build());
 
+        updateCounters(eventId, ScanResult.VALID);
         log.info("[Checkin] Invité {} validé pour l'événement {}", guestName, eventTitle);
 
         return new ScanResponse(ScanResult.VALID, guestName, eventTitle, tableNumber, "Entrée validée");
+    }
+
+    private void updateCounters(Long eventId, ScanResult result) {
+        CheckinParameters params = parametersRepository.findByEventId(eventId)
+                .orElseGet(() -> CheckinParameters.builder()
+                        .event(eventRepository.getReferenceById(eventId))
+                        .build());
+        params.setTotalScans(params.getTotalScans() + 1);
+        if (result == ScanResult.VALID) {
+            params.setValidScans(params.getValidScans() + 1);
+        } else if (result == ScanResult.DUPLICATE) {
+            params.setDuplicateScans(params.getDuplicateScans() + 1);
+        } else {
+            params.setInvalidScans(params.getInvalidScans() + 1);
+        }
+        parametersRepository.save(params);
+    }
+
+    @Override
+    public CheckinParametersResponse getParameters(Long eventId) {
+        return CheckinParametersResponse.from(
+                parametersRepository.findByEventId(eventId)
+                        .orElseGet(() -> CheckinParameters.builder()
+                                .event(eventRepository.findById(eventId)
+                                        .orElseThrow(() -> new RuntimeException("Événement introuvable")))
+                                .build())
+        );
+    }
+
+    @Override
+    @Transactional
+    public CheckinParametersResponse updateSound(Long eventId, UpdateSoundRequest request) {
+        CheckinParameters params = parametersRepository.findByEventId(eventId)
+                .orElseGet(() -> CheckinParameters.builder()
+                        .event(eventRepository.findById(eventId)
+                                .orElseThrow(() -> new RuntimeException("Événement introuvable")))
+                        .build());
+        params.setConfirmationSound(request.confirmationSound());
+        return CheckinParametersResponse.from(parametersRepository.save(params));
+    }
+
+    @Override
+    public CheckinParametersResponse getStats(Long agentUserId) {
+        CheckinAgent agent = agentRepository.findByUserId(agentUserId)
+                .orElseThrow(() -> new UserNotFoundException("Agent introuvable"));
+        Long organizerId = agent.getOrganizer().getId();
+        // Agréger les stats de tous les événements de l'organisateur
+        java.util.List<CheckinParameters> all = parametersRepository.findAllByEventOrganizerId(organizerId);
+        int total = 0, valid = 0, duplicate = 0, invalid = 0;
+        boolean sound = true;
+        for (CheckinParameters p : all) {
+            total     += p.getTotalScans()     != null ? p.getTotalScans()     : 0;
+            valid     += p.getValidScans()     != null ? p.getValidScans()     : 0;
+            duplicate += p.getDuplicateScans() != null ? p.getDuplicateScans() : 0;
+            invalid   += p.getInvalidScans()   != null ? p.getInvalidScans()   : 0;
+            sound = Boolean.TRUE.equals(p.getConfirmationSound());
+        }
+        // Retourner un objet synthétique (eventId=0 pour indiquer agrégation)
+        return new CheckinParametersResponse(0L, sound, total, valid, duplicate, invalid);
     }
 }

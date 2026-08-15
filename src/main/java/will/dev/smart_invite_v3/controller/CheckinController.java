@@ -12,7 +12,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import will.dev.smart_invite_v3.dto.auth.response.ApiResponse;
 import will.dev.smart_invite_v3.dto.checkin.request.CreateAgentRequest;
+import will.dev.smart_invite_v3.dto.checkin.request.UpdateSoundRequest;
 import will.dev.smart_invite_v3.dto.checkin.response.AgentResponse;
+import will.dev.smart_invite_v3.dto.checkin.response.CheckinParametersResponse;
 import will.dev.smart_invite_v3.dto.checkin.response.ScanResponse;
 import will.dev.smart_invite_v3.security.CustomUserDetails;
 import will.dev.smart_invite_v3.service.CheckinService;
@@ -48,5 +50,36 @@ public class CheckinController {
         return ResponseEntity.ok(ApiResponse.success(
                 checkinService.scan(token, userDetails.getUser().getId()),
                 "Scan effectué"));
+    }
+
+    @GetMapping("/stats")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Stats de scan agrégées pour l'agent connecté")
+    public ResponseEntity<ApiResponse<CheckinParametersResponse>> getStats(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                checkinService.getStats(userDetails.getUser().getId()), "Stats récupérées"));
+    }
+
+    @GetMapping("/parameters/{eventId}")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Récupérer les paramètres de check-in d'un événement")
+    public ResponseEntity<ApiResponse<CheckinParametersResponse>> getParameters(
+            @PathVariable Long eventId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                checkinService.getParameters(eventId), "Paramètres récupérés"));
+    }
+
+    @PatchMapping("/parameters/{eventId}/sound")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Activer ou désactiver le son de confirmation")
+    public ResponseEntity<ApiResponse<CheckinParametersResponse>> updateSound(
+            @PathVariable Long eventId,
+            @RequestBody UpdateSoundRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                checkinService.updateSound(eventId, request), "Son mis à jour"));
     }
 }
