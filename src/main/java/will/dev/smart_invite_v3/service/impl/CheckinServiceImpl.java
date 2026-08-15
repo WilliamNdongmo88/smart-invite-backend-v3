@@ -97,28 +97,29 @@ public class CheckinServiceImpl implements CheckinService {
         Invitation invitation = invitationRepository.findByToken(token).orElse(null);
 
         if (invitation == null) {
-            return new ScanResponse(ScanResult.INVALID, null, null, "QR Code invalide");
+            return new ScanResponse(ScanResult.INVALID, null, null, null, "QR Code invalide");
         }
 
         // Vérifier que l'invitation appartient à un événement de l'organisateur de l'agent
         Long eventOrganizerId = invitation.getEvent().getOrganizer().getId();
         if (!eventOrganizerId.equals(agent.getOrganizer().getId())) {
-            return new ScanResponse(ScanResult.INVALID, null, null, "QR Code invalide pour cet événement");
+            return new ScanResponse(ScanResult.INVALID, null, null, null, "QR Code invalide pour cet événement");
         }
 
-        String guestName  = invitation.getGuest().getFullName();
-        String eventTitle = invitation.getEvent().getTitle();
+        String guestName    = invitation.getGuest().getFullName();
+        String eventTitle   = invitation.getEvent().getTitle();
+        Integer tableNumber = invitation.getGuest().getTableNumber();
 
         // REVOKED ou USED → EXPIRED
         if (invitation.getStatus() != InvitationStatus.ACTIVE) {
-            return new ScanResponse(ScanResult.EXPIRED, guestName, eventTitle, "Invitation expirée ou révoquée");
+            return new ScanResponse(ScanResult.EXPIRED, guestName, eventTitle, tableNumber, "Invitation expirée ou révoquée");
         }
 
         // Déjà un checkin VALID → DUPLICATE
         boolean alreadyCheckedIn = checkinRepository
                 .existsByInvitationIdAndScanStatus(invitation.getId(), ScanResult.VALID);
         if (alreadyCheckedIn) {
-            return new ScanResponse(ScanResult.DUPLICATE, guestName, eventTitle, "Invité déjà enregistré");
+            return new ScanResponse(ScanResult.DUPLICATE, guestName, eventTitle, tableNumber, "Invité déjà enregistré");
         }
 
         // VALID — mise à jour statut
@@ -138,6 +139,6 @@ public class CheckinServiceImpl implements CheckinService {
 
         log.info("[Checkin] Invité {} validé pour l'événement {}", guestName, eventTitle);
 
-        return new ScanResponse(ScanResult.VALID, guestName, eventTitle, "Entrée validée");
+        return new ScanResponse(ScanResult.VALID, guestName, eventTitle, tableNumber, "Entrée validée");
     }
 }

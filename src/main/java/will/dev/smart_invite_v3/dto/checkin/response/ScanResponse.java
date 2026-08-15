@@ -14,5 +14,7 @@ public record ScanResponse(
         @Schema(example = "Mariage de Paul & Marie")
         String eventTitle,
 
+        Integer tableNumber,
+
         String message
 ) {}
