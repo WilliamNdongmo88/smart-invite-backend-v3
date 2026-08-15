@@ -31,6 +31,8 @@ import will.dev.smart_invite_v3.repository.UserRepository;
 import will.dev.smart_invite_v3.service.CheckinService;
 import will.dev.smart_invite_v3.service.WhatsAppService;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -46,6 +48,25 @@ public class CheckinServiceImpl implements CheckinService {
     private final EventRepository             eventRepository;
     private final PasswordEncoder             passwordEncoder;
     private final WhatsAppService             whatsAppService;
+
+    @Override
+    public List<AgentResponse> getAgents(Long organizerId) {
+        return agentRepository.findAllByOrganizerId(organizerId).stream()
+                .map(a -> new AgentResponse(a.getUser().getId(), a.getUser().getName(), a.getUser().getPhone()))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public void deleteAgent(Long agentId, Long organizerId) {
+        CheckinAgent agent = agentRepository.findByUserId(agentId)
+                .orElseThrow(() -> new UserNotFoundException("Agent introuvable"));
+        if (!agent.getOrganizer().getId().equals(organizerId)) {
+            throw new RuntimeException("Cet agent ne vous appartient pas");
+        }
+        agentRepository.delete(agent);
+        userRepository.deleteById(agentId);
+    }
 
     @Override
     @Transactional

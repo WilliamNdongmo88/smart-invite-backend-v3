@@ -19,6 +19,8 @@ import will.dev.smart_invite_v3.dto.checkin.response.ScanResponse;
 import will.dev.smart_invite_v3.security.CustomUserDetails;
 import will.dev.smart_invite_v3.service.CheckinService;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/checkin")
 @RequiredArgsConstructor
@@ -38,6 +40,27 @@ public class CheckinController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(
                 checkinService.createAgent(request, userDetails.getUser().getId()),
                 "Agent créé avec succès"));
+    }
+
+    @GetMapping("/agents")
+    @PreAuthorize("hasRole('USER')")
+    @Operation(summary = "Lister les agents de l'organisateur")
+    public ResponseEntity<ApiResponse<List<AgentResponse>>> getAgents(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                checkinService.getAgents(userDetails.getUser().getId()), "Agents récupérés"));
+    }
+
+    @DeleteMapping("/agents/{agentId}")
+    @PreAuthorize("hasRole('USER')")
+    @Operation(summary = "Supprimer un agent")
+    public ResponseEntity<ApiResponse<Void>> deleteAgent(
+            @PathVariable Long agentId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        checkinService.deleteAgent(agentId, userDetails.getUser().getId());
+        return ResponseEntity.ok(ApiResponse.success(null, "Agent supprimé"));
     }
 
     @PostMapping("/scan/{token}")
