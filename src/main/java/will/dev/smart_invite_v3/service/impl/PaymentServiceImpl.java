@@ -148,6 +148,15 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    public List<PaymentResponse> getAllPayments() {
+        return paymentRepository.findAll()
+                .stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .map(PaymentResponse::from)
+                .toList();
+    }
+
+    @Override
     @Transactional
     public PaymentResponse reviewPayment(Long paymentId, ReviewPaymentRequest request) {
         Payment payment = paymentRepository.findById(paymentId)

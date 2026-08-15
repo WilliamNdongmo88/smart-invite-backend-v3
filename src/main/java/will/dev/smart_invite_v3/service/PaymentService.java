@@ -24,4 +24,7 @@ public interface PaymentService {
 
     /** Admin — valider ou rejeter une preuve de paiement */
     PaymentResponse reviewPayment(Long paymentId, ReviewPaymentRequest request);
+
+    /** Admin — tous les paiements */
+    List<PaymentResponse> getAllPayments();
 }

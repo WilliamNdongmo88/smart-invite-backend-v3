@@ -75,6 +75,14 @@ public class PaymentController {
                 "Historique récupéré"));
     }
 
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "[ADMIN] Tous les paiements")
+    public ResponseEntity<ApiResponse<List<PaymentResponse>>> getAll() {
+        return ResponseEntity.ok(ApiResponse.success(
+                paymentService.getAllPayments(), "Paiements récupérés"));
+    }
+
     @PatchMapping("/{id}/review")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "[ADMIN] Valider ou rejeter une preuve de paiement")
