@@ -110,16 +110,16 @@ public class CheckinServiceImpl implements CheckinService {
         String eventTitle   = invitation.getEvent().getTitle();
         Integer tableNumber = invitation.getGuest().getTableNumber();
 
-        // REVOKED ou USED → EXPIRED
-        if (invitation.getStatus() != InvitationStatus.ACTIVE) {
-            return new ScanResponse(ScanResult.EXPIRED, guestName, eventTitle, tableNumber, "Invitation expirée ou révoquée");
-        }
-
         // Déjà un checkin VALID → DUPLICATE
         boolean alreadyCheckedIn = checkinRepository
                 .existsByInvitationIdAndScanStatus(invitation.getId(), ScanResult.VALID);
         if (alreadyCheckedIn) {
             return new ScanResponse(ScanResult.DUPLICATE, guestName, eventTitle, tableNumber, "Invité déjà enregistré");
+        }
+
+        // REVOKED ou USED → EXPIRED
+        if (invitation.getStatus() != InvitationStatus.ACTIVE) {
+            return new ScanResponse(ScanResult.EXPIRED, guestName, eventTitle, tableNumber, "Invitation expirée ou révoquée");
         }
 
         // VALID — mise à jour statut
