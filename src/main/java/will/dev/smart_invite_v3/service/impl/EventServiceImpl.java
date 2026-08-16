@@ -1,8 +1,11 @@
 package will.dev.smart_invite_v3.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.multipart.MultipartFile;
+import will.dev.smart_invite_v3.service.FirebaseStorageService;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +39,10 @@ public class EventServiceImpl implements EventService {
     private final UserRepository       userRepository;
     private final RedisService         redisService;
     private final EventScheduleService eventScheduleService;
+    private final FirebaseStorageService firebaseStorage;
+
+    @Value("${spring.profiles.active:dev}")
+    private String activeProfile;
 
     // Valeurs par défaut — utilisées quand aucun template custom n'est défini
     static final String DEFAULT_ACCROCHE    = ThankYouTemplate.DEFAULT_ACCROCHE;
@@ -131,6 +138,17 @@ public class EventServiceImpl implements EventService {
         Event event = resolveOwned(id, organizerId);
         redisService.delete(CacheKeys.eventStats(id));
         eventRepository.delete(event);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = CacheNames.EVENTS, key = "#id")
+    public String uploadCouplePhoto(Long id, MultipartFile file, Long organizerId) {
+        Event event = resolveOwned(id, organizerId);
+        String url = firebaseStorage.upload(file, activeProfile + "/events/photos");
+        event.setCouplePhotoUrl(url);
+        eventRepository.save(event);
+        return url;
     }
 
     @Override

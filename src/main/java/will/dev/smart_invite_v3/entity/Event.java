@@ -86,6 +86,9 @@ public class Event {
     @OneToOne(mappedBy = "event", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private InvitationCard invitationCard;
 
+    @Column(name = "couple_photo_url", columnDefinition = "TEXT")
+    private String couplePhotoUrl;
+
     @Column(name = "thank_you_template", columnDefinition = "JSON")
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     private ThankYouTemplate thankYouTemplate;

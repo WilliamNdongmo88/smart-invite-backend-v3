@@ -1,5 +1,6 @@
 package will.dev.smart_invite_v3.service;
 
+import org.springframework.web.multipart.MultipartFile;
 import will.dev.smart_invite_v3.dto.event.request.CreateEventRequest;
 import will.dev.smart_invite_v3.dto.event.request.ThankYouMessageRequest;
 import will.dev.smart_invite_v3.dto.event.request.UpdateEventRequest;
@@ -20,6 +21,8 @@ public interface EventService {
     EventResponse update(Long id, UpdateEventRequest request, Long organizerId);
 
     void delete(Long id, Long organizerId);
+
+    String uploadCouplePhoto(Long id, MultipartFile file, Long organizerId);
 
     EventStatsResponse getStats(Long id, Long organizerId);
 

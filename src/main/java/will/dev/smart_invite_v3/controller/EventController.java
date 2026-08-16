@@ -171,6 +171,17 @@ public class EventController {
                 .body(pdf);
     }
 
+    @PostMapping(value = "/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Uploader la photo du couple/événement")
+    public ResponseEntity<ApiResponse<String>> uploadCouplePhoto(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        String url = eventService.uploadCouplePhoto(id, file, userDetails.getUser().getId());
+        return ResponseEntity.ok(ApiResponse.success(url, "Photo uploadée avec succès"));
+    }
+
     @PostMapping(value = "/{id}/card/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Importer un modèle de carte PDF personnalisé")
     public ResponseEntity<ApiResponse<CardResponse>> uploadCustomCard(
