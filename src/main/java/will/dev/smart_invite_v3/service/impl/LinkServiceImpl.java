@@ -9,6 +9,7 @@ import will.dev.smart_invite_v3.dto.invitation.request.CreateGuestRequest;
 import will.dev.smart_invite_v3.dto.invitation.response.InvitationResponse;
 import will.dev.smart_invite_v3.dto.link.request.CreateLinkRequest;
 import will.dev.smart_invite_v3.dto.link.request.UpdateLinkRequest;
+import will.dev.smart_invite_v3.dto.link.response.LinkPreviewResponse;
 import will.dev.smart_invite_v3.dto.link.response.LinkResponse;
 import will.dev.smart_invite_v3.entity.Event;
 import will.dev.smart_invite_v3.entity.Link;
@@ -123,6 +124,15 @@ public class LinkServiceImpl implements LinkService {
         );
 
         return invitation;
+    }
+
+    // ---- Preview public ----
+
+    @Override
+    public LinkPreviewResponse preview(String token) {
+        Link link = linkRepository.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("Lien invalide"));
+        return LinkPreviewResponse.from(link);
     }
 
     // ---- Helpers ----

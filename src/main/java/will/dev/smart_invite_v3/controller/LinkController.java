@@ -14,6 +14,7 @@ import will.dev.smart_invite_v3.dto.invitation.request.CreateGuestRequest;
 import will.dev.smart_invite_v3.dto.invitation.response.InvitationResponse;
 import will.dev.smart_invite_v3.dto.link.request.CreateLinkRequest;
 import will.dev.smart_invite_v3.dto.link.request.UpdateLinkRequest;
+import will.dev.smart_invite_v3.dto.link.response.LinkPreviewResponse;
 import will.dev.smart_invite_v3.dto.link.response.LinkResponse;
 import will.dev.smart_invite_v3.security.CustomUserDetails;
 import will.dev.smart_invite_v3.service.LinkService;
@@ -74,6 +75,14 @@ public class LinkController {
     ) {
         linkService.delete(linkId, userDetails.getUser().getId());
         return ResponseEntity.ok(ApiResponse.success(null, "Lien supprimé"));
+    }
+
+    @GetMapping("/preview/{token}")
+    @Operation(summary = "Preview public d'un lien (sans auth)")
+    public ResponseEntity<ApiResponse<LinkPreviewResponse>> preview(
+            @PathVariable String token
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(linkService.preview(token), "Preview récupéré"));
     }
 
     @PostMapping("/join/{token}")

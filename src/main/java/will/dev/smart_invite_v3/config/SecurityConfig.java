@@ -72,6 +72,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/invitations/*/rsvp").permitAll()
 
                         // Liens d'auto-inscription publics (sans auth)
+                        .requestMatchers(HttpMethod.GET,  "/api/link/preview/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/link/join/*").permitAll()
 
                         // Admin
