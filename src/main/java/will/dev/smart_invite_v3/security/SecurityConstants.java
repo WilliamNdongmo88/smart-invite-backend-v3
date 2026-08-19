@@ -18,7 +18,7 @@ public final class SecurityConstants {
 
     public static final String REDIS_RATE_LIMIT_PREFIX = "rate:";
 
-    public static final int MAX_REQUESTS_PER_MINUTE = 100;
+    public static final int MAX_REQUESTS_PER_MINUTE = 300;
 
     public static final long RATE_LIMIT_WINDOW = 60;
 
