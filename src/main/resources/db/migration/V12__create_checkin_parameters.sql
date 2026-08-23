@@ -14,6 +14,8 @@ CREATE TABLE checkin_parameters (
 
     invalid_scans INTEGER DEFAULT 0,
 
+    duplicate_scans INTEGER DEFAULT 0,
+
     CONSTRAINT fk_parameter_event
         FOREIGN KEY(event_id)
         REFERENCES events(id)

@@ -31,9 +31,13 @@ CREATE TABLE events (
 
     thank_you_message TEXT,
 
+    couple_photo_url TEXT,
+
     show_wedding_religious_location BOOLEAN DEFAULT FALSE,
 
     is_model_card BOOLEAN DEFAULT FALSE,
+
+    thank_you_template JSON NULL,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
