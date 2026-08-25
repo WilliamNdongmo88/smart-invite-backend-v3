@@ -17,7 +17,8 @@ import java.time.LocalDateTime;
         name = "events",
         indexes = {
                 @Index(name = "idx_event_organizer", columnList = "organizer_id"),
-                @Index(name = "idx_event_status",    columnList = "status")
+                @Index(name = "idx_event_status",    columnList = "status"),
+                @Index(name = "idx_event_type",      columnList = "type")
         }
 )
 public class Event {
@@ -52,6 +53,15 @@ public class Event {
 
     @Column(name = "event_date")
     private LocalDateTime eventDate;
+
+    @Column(name = "date_label", length = 150)
+    private String dateLabel;
+
+    @Column(name = "venue_name", length = 255)
+    private String venueName;
+
+    @Column(name = "venue_city", length = 100)
+    private String venueCity;
 
     @Column(name = "religious_location", columnDefinition = "TEXT")
     private String religiousLocation;
@@ -89,9 +99,37 @@ public class Event {
     @Column(name = "couple_photo_url", columnDefinition = "TEXT")
     private String couplePhotoUrl;
 
+    @Column(name = "wedding_storage_key", length = 100)
+    private String weddingStorageKey;
+
+    @Column(name = "bride_first_name", length = 100)
+    private String brideFirstName;
+
+    @Column(name = "groom_first_name", length = 100)
+    private String groomFirstName;
+
+    @Column(name = "wedding_page_slug", length = 150)
+    private String weddingPageSlug;
+
     @Column(name = "thank_you_template", columnDefinition = "JSON")
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     private ThankYouTemplate thankYouTemplate;
+
+    @Column(name = "wedding_details_content", columnDefinition = "JSONB")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    private WeddingDetailsContentData weddingDetailsContent;
+
+    @Column(name = "conference_details_content", columnDefinition = "JSONB")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    private ConferenceDetailsContentData conferenceDetailsContent;
+
+    @Column(name = "gala_details_content", columnDefinition = "JSONB")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    private GalaDetailsContentData galaDetailsContent;
+
+    @Column(name = "ceremonie_details_content", columnDefinition = "JSONB")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    private CeremonieDetailsContentData ceremonieDetailsContent;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -108,5 +146,18 @@ public class Event {
     @PreUpdate
     void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * Retourne l'objet de contenu JSON correspondant au type d'événement.
+     */
+    public Object getDetailsContent() {
+        if (type == null) return null;
+        return switch (type) {
+            case MARIAGE -> weddingDetailsContent;
+            case CONFERENCE -> conferenceDetailsContent;
+            case GALA -> galaDetailsContent;
+            case CEREMONIE -> ceremonieDetailsContent;
+        };
     }
 }

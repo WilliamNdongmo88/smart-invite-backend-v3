@@ -2,22 +2,20 @@ package will.dev.smart_invite_v3.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.multipart.MultipartFile;
-import will.dev.smart_invite_v3.service.FirebaseStorageService;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import will.dev.smart_invite_v3.cache.CacheKeys;
 import will.dev.smart_invite_v3.cache.CacheNames;
-import will.dev.smart_invite_v3.dto.event.request.CreateEventRequest;
-import will.dev.smart_invite_v3.dto.event.request.ThankYouMessageRequest;
-import will.dev.smart_invite_v3.dto.event.request.UpdateEventRequest;
+import will.dev.smart_invite_v3.dto.event.request.*;
 import will.dev.smart_invite_v3.dto.event.response.EventResponse;
 import will.dev.smart_invite_v3.dto.event.response.EventStatsResponse;
 import will.dev.smart_invite_v3.dto.event.response.ThankYouTemplateResponse;
 import will.dev.smart_invite_v3.entity.Event;
+import will.dev.smart_invite_v3.entity.InvitationCard;
 import will.dev.smart_invite_v3.entity.ThankYouTemplate;
 import will.dev.smart_invite_v3.entity.User;
 import will.dev.smart_invite_v3.exception.EventAccessDeniedException;
@@ -26,6 +24,7 @@ import will.dev.smart_invite_v3.exception.UserNotFoundException;
 import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.UserRepository;
 import will.dev.smart_invite_v3.service.EventService;
+import will.dev.smart_invite_v3.service.FirebaseStorageService;
 import will.dev.smart_invite_v3.service.RedisService;
 
 import java.util.List;
@@ -52,31 +51,39 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional
-    public EventResponse create(CreateEventRequest request, Long organizerId) {
+    public EventResponse create(EventPayloadRequest request, Long organizerId) {
         User organizer = userRepository.findById(organizerId)
                 .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable"));
 
         Event event = Event.builder()
-                .title(request.title())
-                .description(request.description())
-                .type(request.type())
-                .budget(request.budget())
-                .maxGuests(request.maxGuests())
-                .concernedNames(request.concernedNames())
-                .eventDate(request.eventDate())
-                .religiousLocation(request.religiousLocation())
-                .religiousDateTime(request.religiousDateTime())
-                .civilLocation(request.civilLocation())
-                .civilDateTime(request.civilDateTime())
-                .banquetLocation(request.banquetLocation())
-                .banquetDateTime(request.banquetDateTime())
-                .showWeddingReligiousLocation(Boolean.TRUE.equals(request.showWeddingReligiousLocation()))
-                .importMyModelCard(Boolean.TRUE.equals(request.importMyModelCard()))
+                .title(request.extractTitle())
+                .description(request.extractDescription())
+                .type(request.eventType())
+                .budget(request.extractBudget())
+                .maxGuests(request.extractMaxGuests())
+                .concernedNames(request.extractConcernedNames())
+                .eventDate(request.extractEventDate())
+                .dateLabel(request.extractDateLabel())
+                .venueName(request.extractVenueName())
+                .venueCity(request.extractVenueCity())
+                .couplePhotoUrl(request.extractCoverPhotoUrl())
                 .organizer(organizer)
                 .build();
 
+        applyContentPayload(event, request);
+
+        // Carte d'invitation associée
+        InvitationCard card = InvitationCard.builder()
+                .event(event)
+                .title(request.extractTitle())
+                .mainMessage(request.extractDescription())
+                .build();
+        event.setInvitationCard(card);
+
         Event saved = eventRepository.save(event);
-        eventScheduleService.schedule(saved.getId(), saved.getEventDate());
+        if (saved.getEventDate() != null) {
+            eventScheduleService.schedule(saved.getId(), saved.getEventDate());
+        }
         return EventResponse.from(saved);
     }
 
@@ -100,33 +107,45 @@ public class EventServiceImpl implements EventService {
     @Caching(evict = {
             @CacheEvict(cacheNames = CacheNames.EVENTS, key = "#id")
     })
-    public EventResponse update(Long id, UpdateEventRequest request, Long organizerId) {
+    public EventResponse update(Long id, EventPayloadRequest request, Long organizerId) {
         Event event = resolveOwned(id, organizerId);
 
-        event.setTitle(request.title());
-        event.setDescription(request.description());
-        event.setType(request.type());
-        event.setBudget(request.budget());
-        event.setMaxGuests(request.maxGuests());
-        event.setConcernedNames(request.concernedNames());
-        event.setEventDate(request.eventDate());
-        event.setReligiousLocation(request.religiousLocation());
-        event.setReligiousDateTime(request.religiousDateTime());
-        event.setCivilLocation(request.civilLocation());
-        event.setCivilDateTime(request.civilDateTime());
-        event.setBanquetLocation(request.banquetLocation());
-        event.setBanquetDateTime(request.banquetDateTime());
-        event.setShowWeddingReligiousLocation(Boolean.TRUE.equals(request.showWeddingReligiousLocation()));
-        event.setImportMyModelCard(Boolean.TRUE.equals(request.importMyModelCard()));
+        event.setTitle(request.extractTitle());
+        event.setDescription(request.extractDescription());
+        event.setType(request.eventType());
+        event.setBudget(request.extractBudget());
+        event.setMaxGuests(request.extractMaxGuests());
+        event.setConcernedNames(request.extractConcernedNames());
+        event.setEventDate(request.extractEventDate());
+        event.setDateLabel(request.extractDateLabel());
+        event.setVenueName(request.extractVenueName());
+        event.setVenueCity(request.extractVenueCity());
+        if (request.extractCoverPhotoUrl() != null) {
+            event.setCouplePhotoUrl(request.extractCoverPhotoUrl());
+        }
+
+        applyContentPayload(event, request);
 
         redisService.delete(CacheKeys.eventStats(id));
         Event saved = eventRepository.save(event);
 
-        if (request.eventDate() != null) {
+        if (saved.getEventDate() != null) {
             eventScheduleService.schedule(saved.getId(), saved.getEventDate());
         }
 
         return EventResponse.from(saved);
+    }
+
+    private void applyContentPayload(Event event, EventPayloadRequest request) {
+        if (request instanceof WeddingEventPayloadRequest w) {
+            event.setWeddingDetailsContent(w.toContentData());
+        } else if (request instanceof ConferenceEventPayloadRequest c) {
+            event.setConferenceDetailsContent(c.toContentData());
+        } else if (request instanceof GalaEventPayloadRequest g) {
+            event.setGalaDetailsContent(g.toContentData());
+        } else if (request instanceof CeremonieEventPayloadRequest ce) {
+            event.setCeremonieDetailsContent(ce.toContentData());
+        }
     }
 
     @Override
@@ -149,6 +168,19 @@ public class EventServiceImpl implements EventService {
         event.setCouplePhotoUrl(url);
         eventRepository.save(event);
         return url;
+    }
+
+    @Override
+    public String uploadImage(MultipartFile file, String folder) {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("Le fichier image est vide");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new IllegalArgumentException("Seuls les fichiers image sont acceptés (JPG, PNG, WEBP, GIF)");
+        }
+        String cleanFolder = (folder != null && !folder.isBlank()) ? folder.trim() : "content";
+        return firebaseStorage.upload(file, activeProfile + "/events/" + cleanFolder);
     }
 
     @Override

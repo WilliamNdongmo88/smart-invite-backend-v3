@@ -5,10 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import will.dev.smart_invite_v3.dto.event.request.CreateEventRequest;
-import will.dev.smart_invite_v3.dto.event.request.CreateEventWithCardRequest;
 import will.dev.smart_invite_v3.dto.event.request.InvitationNoteRequest;
-import will.dev.smart_invite_v3.dto.event.request.UpdateEventWithCardRequest;
 import will.dev.smart_invite_v3.dto.event.response.CardResponse;
 import will.dev.smart_invite_v3.dto.event.response.EventResponse;
 import will.dev.smart_invite_v3.dto.event.response.EventWithCardResponse;
@@ -16,18 +13,12 @@ import will.dev.smart_invite_v3.entity.Event;
 import will.dev.smart_invite_v3.entity.InvitationCard;
 import will.dev.smart_invite_v3.exception.EventAccessDeniedException;
 import will.dev.smart_invite_v3.exception.EventNotFoundException;
-import will.dev.smart_invite_v3.exception.UserNotFoundException;
 import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.InvitationCardRepository;
-import will.dev.smart_invite_v3.repository.UserRepository;
 import will.dev.smart_invite_v3.service.FirebaseStorageService;
 import will.dev.smart_invite_v3.service.InvitationCardService;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -36,96 +27,14 @@ public class InvitationCardServiceImpl implements InvitationCardService {
 
     private final EventRepository          eventRepository;
     private final InvitationCardRepository cardRepository;
-    private final UserRepository           userRepository;
     private final PdfCardGeneratorService  pdfGenerator;
     private final FirebaseStorageService   firebaseStorage;
-    private final EventScheduleService     eventScheduleService;
 
     @Value("${spring.profiles.active}")
     private String path;
 
     @Value("${app.upload.dir:uploads/cards}")
     private String uploadDir;
-
-    @Override
-    @Transactional
-    public EventWithCardResponse createWithCard(CreateEventWithCardRequest request, Long organizerId) {
-        // 1. Créer l'event
-        var organizer = userRepository.findById(organizerId)
-                .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable"));
-
-        CreateEventRequest ev = request.event();
-        Event event = Event.builder()
-                .title(ev.title())
-                .description(ev.description())
-                .type(ev.type())
-                .budget(ev.budget())
-                .maxGuests(ev.maxGuests())
-                .concernedNames(ev.concernedNames())
-                .eventDate(ev.eventDate())
-                .religiousLocation(ev.religiousLocation())
-                .religiousDateTime(ev.religiousDateTime())
-                .civilLocation(ev.civilLocation())
-                .civilDateTime(ev.civilDateTime())
-                .banquetLocation(ev.banquetLocation())
-                .banquetDateTime(ev.banquetDateTime())
-                .showWeddingReligiousLocation(Boolean.TRUE.equals(ev.showWeddingReligiousLocation()))
-                .importMyModelCard(Boolean.TRUE.equals(ev.importMyModelCard()))
-                .organizer(organizer)
-                .build();
-
-        Event savedEvent = eventRepository.save(event);
-        eventScheduleService.schedule(savedEvent.getId(), savedEvent.getEventDate());
-
-        // 2. Créer la carte liée
-        InvitationNoteRequest note = request.invitationNote();
-        InvitationCard card = buildCard(note, savedEvent);
-        InvitationCard savedCard = cardRepository.save(card);
-
-        return new EventWithCardResponse(
-                EventResponse.from(savedEvent),
-                CardResponse.from(savedCard, savedEvent.getId())
-        );
-    }
-
-    @Override
-    @Transactional
-    public EventWithCardResponse updateWithCard(Long eventId, UpdateEventWithCardRequest request, Long organizerId) {
-        Event event = resolveOwned(eventId, organizerId);
-        LocalDateTime previousDate = event.getEventDate();
-
-        var ev = request.event();
-        event.setTitle(ev.title());
-        event.setDescription(ev.description());
-        event.setType(ev.type());
-        event.setBudget(ev.budget());
-        event.setMaxGuests(ev.maxGuests());
-        event.setConcernedNames(ev.concernedNames());
-        event.setEventDate(ev.eventDate());
-        event.setReligiousLocation(ev.religiousLocation());
-        event.setReligiousDateTime(ev.religiousDateTime());
-        event.setCivilLocation(ev.civilLocation());
-        event.setCivilDateTime(ev.civilDateTime());
-        event.setBanquetLocation(ev.banquetLocation());
-        event.setBanquetDateTime(ev.banquetDateTime());
-        event.setShowWeddingReligiousLocation(Boolean.TRUE.equals(ev.showWeddingReligiousLocation()));
-        event.setImportMyModelCard(Boolean.TRUE.equals(ev.importMyModelCard()));
-        Event savedEvent = eventRepository.save(event);
-
-        if (ev.eventDate() != null) {
-            eventScheduleService.schedule(savedEvent.getId(), savedEvent.getEventDate());
-        }
-
-        InvitationCard card = cardRepository.findByEventId(eventId)
-                .orElseGet(() -> InvitationCard.builder().event(savedEvent).build());
-        applyNote(card, request.invitationNote());
-        InvitationCard savedCard = cardRepository.save(card);
-
-        return new EventWithCardResponse(
-                EventResponse.from(savedEvent),
-                CardResponse.from(savedCard, eventId)
-        );
-    }
 
     @Override
     @Transactional
@@ -156,15 +65,21 @@ public class InvitationCardServiceImpl implements InvitationCardService {
         Event event = resolveOwned(eventId, organizerId);
         InvitationCard card = cardRepository.findByEventId(eventId).orElse(null);
 
+        // MARIAGE → la page WeddingDetails gère l'invitation de façon dédiée.
+        if (event.getType().isWeddingType()) {
+            throw new UnsupportedOperationException(
+                "Les mariages utilisent l'éditeur WeddingDetails dédié. " +
+                "La génération PDF automatique n'est pas disponible pour ce type d'événement."
+            );
+        }
+
         // is_model_card = true + pdf_url présent → retourner le PDF importé
         if (Boolean.TRUE.equals(event.getImportMyModelCard())
                 && card != null && card.getPdfUrl() != null) {
             try {
-                Path path = Paths.get(card.getPdfUrl());
-                if (Files.exists(path)) {
-                    return Files.readAllBytes(path);
-                }
-            } catch (IOException ignored) {}
+                byte[] bytes = firebaseStorage.downloadBytes(card.getPdfUrl());
+                if (bytes != null && bytes.length > 0) return bytes;
+            } catch (Exception ignored) {}
         }
 
         try {
@@ -197,12 +112,6 @@ public class InvitationCardServiceImpl implements InvitationCardService {
     }
 
     // ---- Helpers ----
-
-    private InvitationCard buildCard(InvitationNoteRequest note, Event event) {
-        InvitationCard card = InvitationCard.builder().event(event).build();
-        applyNote(card, note);
-        return card;
-    }
 
     private void applyNote(InvitationCard card, InvitationNoteRequest note) {
         card.setTitle(note.title());

@@ -37,7 +37,7 @@ public class EventScheduleService {
             }
 
         // TEMPORAIRE — pour test
-        // LocalDateTime scheduledFor = LocalDateTime.now().plusMinutes(2);
+        //LocalDateTime scheduledFor = LocalDateTime.now().plusMinutes(2);
         LocalDateTime scheduledFor = eventDate.plusDays(1);
 
             Event event = eventRepository.findById(eventId)

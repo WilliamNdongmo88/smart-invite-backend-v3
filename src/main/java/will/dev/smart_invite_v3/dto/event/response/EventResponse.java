@@ -1,7 +1,7 @@
 package will.dev.smart_invite_v3.dto.event.response;
 
-import will.dev.smart_invite_v3.entity.ThankYouTemplate;
 import will.dev.smart_invite_v3.entity.Event;
+import will.dev.smart_invite_v3.entity.ThankYouTemplate;
 import will.dev.smart_invite_v3.enums.EventStatus;
 import will.dev.smart_invite_v3.enums.EventType;
 
@@ -17,6 +17,9 @@ public record EventResponse(
         Integer maxGuests,
         String concernedNames,
         LocalDateTime eventDate,
+        String dateLabel,
+        String venueName,
+        String venueCity,
         String religiousLocation,
         LocalDateTime religiousDateTime,
         String civilLocation,
@@ -27,6 +30,7 @@ public record EventResponse(
         Boolean importMyModelCard,
         String couplePhotoUrl,
         ThankYouTemplate thankYouTemplate,
+        Object detailsContent,
         Long organizerId,
         String organizerName,
         LocalDateTime createdAt,
@@ -43,6 +47,9 @@ public record EventResponse(
                 event.getMaxGuests(),
                 event.getConcernedNames(),
                 event.getEventDate(),
+                event.getDateLabel(),
+                event.getVenueName(),
+                event.getVenueCity(),
                 event.getReligiousLocation(),
                 event.getReligiousDateTime(),
                 event.getCivilLocation(),
@@ -53,6 +60,7 @@ public record EventResponse(
                 event.getImportMyModelCard(),
                 event.getCouplePhotoUrl(),
                 event.getThankYouTemplate(),
+                event.getDetailsContent(),
                 event.getOrganizer().getId(),
                 event.getOrganizer().getName(),
                 event.getCreatedAt(),

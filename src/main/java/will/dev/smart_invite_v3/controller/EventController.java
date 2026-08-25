@@ -12,7 +12,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import will.dev.smart_invite_v3.dto.auth.response.ApiResponse;
-import will.dev.smart_invite_v3.dto.event.request.*;
+import will.dev.smart_invite_v3.dto.event.request.EventPayloadRequest;
+import will.dev.smart_invite_v3.dto.event.request.ThankYouMessageRequest;
 import will.dev.smart_invite_v3.dto.event.response.*;
 import will.dev.smart_invite_v3.security.CustomUserDetails;
 import will.dev.smart_invite_v3.service.EventService;
@@ -23,19 +24,19 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/events")
 @RequiredArgsConstructor
-@Tag(name = "Events", description = "Gestion des événements")
+@Tag(name = "Events", description = "Gestion des événements multi-types (Mariage, Conférence, Gala, Cérémonie)")
 @SecurityRequirement(name = "bearerAuth")
 public class EventController {
 
     private final EventService          eventService;
     private final InvitationCardService cardService;
 
-    // ---- CRUD Événements ----
+    // ---- Création et Modification d'Événements ----
 
     @PostMapping
-    @Operation(summary = "Créer un événement")
+    @Operation(summary = "Créer un événement avec son contenu spécifique (MARIAGE, CONFERENCE, GALA, CEREMONIE)")
     public ResponseEntity<ApiResponse<EventResponse>> create(
-            @Valid @RequestBody CreateEventRequest request,
+            @Valid @RequestBody EventPayloadRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(
@@ -44,14 +45,14 @@ public class EventController {
     }
 
     @PostMapping("/with-card")
-    @Operation(summary = "Créer un événement avec sa carte d'invitation simultanément")
-    public ResponseEntity<ApiResponse<EventWithCardResponse>> createWithCard(
-            @Valid @RequestBody CreateEventWithCardRequest request,
+    @Operation(summary = "Créer un événement (alias multi-types)")
+    public ResponseEntity<ApiResponse<EventResponse>> createWithCard(
+            @Valid @RequestBody EventPayloadRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(
-                cardService.createWithCard(request, userDetails.getUser().getId()),
-                "Événement et carte créés avec succès"));
+                eventService.create(request, userDetails.getUser().getId()),
+                "Événement créé avec succès"));
     }
 
     @GetMapping
@@ -65,7 +66,7 @@ public class EventController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Détail d'un événement")
+    @Operation(summary = "Détail complet d'un événement")
     public ResponseEntity<ApiResponse<EventResponse>> findById(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -76,10 +77,22 @@ public class EventController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Modifier un événement")
+    @Operation(summary = "Modifier un événement avec son contenu spécifique")
     public ResponseEntity<ApiResponse<EventResponse>> update(
             @PathVariable Long id,
-            @Valid @RequestBody UpdateEventRequest request,
+            @Valid @RequestBody EventPayloadRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                eventService.update(id, request, userDetails.getUser().getId()),
+                "Événement mis à jour"));
+    }
+
+    @PutMapping(value = "/{id}/card", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Mettre à jour l'événement et son contenu (alias)")
+    public ResponseEntity<ApiResponse<EventResponse>> updateWithCard(
+            @PathVariable Long id,
+            @Valid @RequestBody EventPayloadRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         return ResponseEntity.ok(ApiResponse.success(
@@ -108,7 +121,7 @@ public class EventController {
                 "Statistiques récupérées"));
     }
 
-    // ---- Carte d'invitation ----
+    // ---- Carte d'invitation & Assets ----
 
     @GetMapping("/{id}/card")
     @Operation(summary = "Récupérer l'événement et sa carte d'invitation")
@@ -119,18 +132,6 @@ public class EventController {
         return ResponseEntity.ok(ApiResponse.success(
                 cardService.getCard(id, userDetails.getUser().getId()),
                 "Événement et carte récupérés"));
-    }
-
-    @PutMapping(value = "/{id}/card", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Mettre à jour l'événement et sa carte d'invitation")
-    public ResponseEntity<ApiResponse<EventWithCardResponse>> updateWithCard(
-            @PathVariable Long id,
-            @Valid @RequestBody UpdateEventWithCardRequest request,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        return ResponseEntity.ok(ApiResponse.success(
-                cardService.updateWithCard(id, request, userDetails.getUser().getId()),
-                "Événement et carte mis à jour"));
     }
 
     @GetMapping("/{id}/thank-you-message")
@@ -171,8 +172,19 @@ public class EventController {
                 .body(pdf);
     }
 
+    @PostMapping(value = "/upload-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Uploader une image d'événement vers Firebase Storage")
+    public ResponseEntity<ApiResponse<String>> uploadImage(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "folder", required = false, defaultValue = "content") String folder,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        String url = eventService.uploadImage(file, folder);
+        return ResponseEntity.ok(ApiResponse.success(url, "Image uploadée avec succès sur Firebase"));
+    }
+
     @PostMapping(value = "/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Uploader la photo du couple/événement")
+    @Operation(summary = "Uploader la photo de couverture ou de couple")
     public ResponseEntity<ApiResponse<String>> uploadCouplePhoto(
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file,

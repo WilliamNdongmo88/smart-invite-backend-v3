@@ -156,23 +156,21 @@ public class InvitationPdfService {
         switch (event.getType()) {
             case MARIAGE -> {
                 addCeremony(doc, "MARIAGE CIVIL", event.getCivilDateTime(), event.getCivilLocation(), body, label, accent, text);
-                addCeremony(doc, "CEREMONIE RELIGIEUSE", event.getReligiousDateTime(), event.getReligiousLocation(), body, label, accent, text);
-                addCeremony(doc, "RECEPTION NUPTIALE", event.getBanquetDateTime(), event.getBanquetLocation(), body, label, accent, text);
-            }
-            case FIANCAILLES -> {
-                addCeremony(doc, "CEREMONIE DE FIANCAILLES", event.getReligiousDateTime(), event.getReligiousLocation(), body, label, accent, text);
+                if (Boolean.TRUE.equals(event.getShowWeddingReligiousLocation())) {
+                    addCeremony(doc, "CEREMONIE RELIGIEUSE", event.getReligiousDateTime(), event.getReligiousLocation(), body, label, accent, text);
+                }
                 addCeremony(doc, "RECEPTION", event.getBanquetDateTime(), event.getBanquetLocation(), body, label, accent, text);
             }
-            case ANNIVERSAIRE_MARIAGE -> {
-                addCeremony(doc, "MESSE D'ACTION DE GRACE", event.getReligiousDateTime(), event.getReligiousLocation(), body, label, accent, text);
-                addCeremony(doc, "SOIREE ANNIVERSAIRE", event.getBanquetDateTime(), event.getBanquetLocation(), body, label, accent, text);
+            case GALA -> {
+                addCeremony(doc, "COCKTAIL DE BIENVENUE", event.getEventDate(), null, body, label, accent, text);
+                addCeremony(doc, "DINER DE GALA", event.getBanquetDateTime(), event.getBanquetLocation(), body, label, accent, text);
             }
-            case ANNIVERSAIRE ->
-                addCeremony(doc, "CELEBRATION", event.getBanquetDateTime(), event.getBanquetLocation(), body, label, accent, text);
-            case EVENEMENT_PROFESSIONNEL -> {
-                addCeremony(doc, "CEREMONIE D'OUVERTURE", event.getCivilDateTime(), event.getCivilLocation(), body, label, accent, text);
+            case CONFERENCE -> {
+                addCeremony(doc, "CEREMONIE D'OUVERTURE", event.getEventDate(), event.getCivilLocation(), body, label, accent, text);
                 addCeremony(doc, "RECEPTION", event.getBanquetDateTime(), event.getBanquetLocation(), body, label, accent, text);
             }
+            case CEREMONIE ->
+                addCeremony(doc, "CEREMONIE", event.getEventDate(), event.getBanquetLocation(), body, label, accent, text);
         }
     }
 
@@ -189,11 +187,10 @@ public class InvitationPdfService {
 
     private String defaultMessage(Event event) {
         return switch (event.getType()) {
-            case MARIAGE -> "C'est avec un immense bonheur que nous vous invitons a celebrer notre union.";
-            case FIANCAILLES -> "C'est avec une grande joie que nous vous convions a partager ce moment unique.";
-            case ANNIVERSAIRE_MARIAGE -> "Nous avons la joie de vous inviter a celebrer cette belle etape de notre vie.";
-            case ANNIVERSAIRE -> "Nous avons le plaisir de vous convier a notre celebration.";
-            case EVENEMENT_PROFESSIONNEL -> "Nous avons l'honneur de vous convier a cet evenement.";
+            case MARIAGE     -> "C'est avec un immense bonheur que nous vous invitons a celebrer notre union.";
+            case GALA        -> "Nous avons le plaisir de vous convier a notre soiree de gala.";
+            case CONFERENCE  -> "Nous avons l'honneur de vous convier a cet evenement.";
+            case CEREMONIE   -> "Nous avons la joie de vous inviter a partager ce moment avec nous.";
         };
     }
 

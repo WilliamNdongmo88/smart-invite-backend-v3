@@ -206,45 +206,41 @@ public class PdfCardGeneratorService {
                                DeviceRgb accent, DeviceRgb text) {
         switch (event.getType()) {
             case MARIAGE -> {
-                addCeremony(doc, "MARIAGE CIVIL",
+                // MARIAGE : programme géré par la page WeddingDetails dédiée.
+                // On affiche uniquement ce qui est renseigné dans l'entité.
+                addCeremony(doc, "CÉRÉMONIE CIVILE",
                         event.getCivilDateTime(), event.getCivilLocation(),
                         card != null ? card.getCivilNote() : null,
                         body, label, accent, text);
-                addCeremony(doc, "CÉRÉMONIE RELIGIEUSE",
-                        event.getReligiousDateTime(), event.getReligiousLocation(),
-                        null, body, label, accent, text);
-                addCeremony(doc, "RÉCEPTION NUPTIALE",
-                        event.getBanquetDateTime(), event.getBanquetLocation(),
-                        null, body, label, accent, text);
-            }
-            case FIANCAILLES -> {
-                addCeremony(doc, "CÉRÉMONIE DE FIANÇAILLES",
-                        event.getReligiousDateTime(), event.getReligiousLocation(),
-                        null, body, label, accent, text);
+                if (Boolean.TRUE.equals(event.getShowWeddingReligiousLocation())) {
+                    addCeremony(doc, "CÉRÉMONIE RELIGIEUSE",
+                            event.getReligiousDateTime(), event.getReligiousLocation(),
+                            null, body, label, accent, text);
+                }
                 addCeremony(doc, "RÉCEPTION",
                         event.getBanquetDateTime(), event.getBanquetLocation(),
                         null, body, label, accent, text);
             }
-            case ANNIVERSAIRE_MARIAGE -> {
-                addCeremony(doc, "MESSE D'ACTION DE GRÂCE",
-                        event.getReligiousDateTime(), event.getReligiousLocation(),
+            case GALA -> {
+                addCeremony(doc, "COCKTAIL DE BIENVENUE",
+                        event.getEventDate(), null,
                         null, body, label, accent, text);
-                addCeremony(doc, "SOIRÉE ANNIVERSAIRE",
+                addCeremony(doc, "DÎNER DE GALA",
                         event.getBanquetDateTime(), event.getBanquetLocation(),
                         null, body, label, accent, text);
             }
-            case ANNIVERSAIRE ->
-                addCeremony(doc, "CÉLÉBRATION",
-                        event.getBanquetDateTime(), event.getBanquetLocation(),
-                        null, body, label, accent, text);
-            case EVENEMENT_PROFESSIONNEL -> {
+            case CONFERENCE -> {
                 addCeremony(doc, "CÉRÉMONIE D'OUVERTURE",
-                        event.getCivilDateTime(), event.getCivilLocation(),
+                        event.getEventDate(), event.getCivilLocation(),
                         null, body, label, accent, text);
                 addCeremony(doc, "RÉCEPTION",
                         event.getBanquetDateTime(), event.getBanquetLocation(),
                         null, body, label, accent, text);
             }
+            case CEREMONIE ->
+                addCeremony(doc, "CÉRÉMONIE",
+                        event.getEventDate(), event.getBanquetLocation(),
+                        null, body, label, accent, text);
         }
     }
 
@@ -277,16 +273,13 @@ public class PdfCardGeneratorService {
             case MARIAGE ->
                 "C'est avec un immense bonheur que nous vous invitons à célébrer notre union. " +
                 "Votre présence à nos côtés rendra cette journée inoubliable.";
-            case FIANCAILLES ->
-                "C'est avec une grande joie que nous vous convions à partager ce moment unique " +
-                "où nos cœurs s'engagent l'un envers l'autre.";
-            case ANNIVERSAIRE_MARIAGE ->
-                "Nous avons la joie de vous inviter à célébrer avec nous cette belle étape de notre vie commune.";
-            case ANNIVERSAIRE ->
-                "Nous avons le plaisir de vous convier à notre célébration. " +
-                "Votre présence sera le plus beau des cadeaux.";
-            case EVENEMENT_PROFESSIONNEL ->
+            case GALA ->
+                "Nous avons le plaisir de vous convier à notre soirée de gala. " +
+                "Votre présence illuminera cette belle occasion.";
+            case CONFERENCE ->
                 "Nous avons l'honneur de vous convier à cet événement et comptons sur votre présence.";
+            case CEREMONIE ->
+                "Nous avons la joie de vous inviter à partager ce moment solennel et festif avec nous.";
         };
     }
 
