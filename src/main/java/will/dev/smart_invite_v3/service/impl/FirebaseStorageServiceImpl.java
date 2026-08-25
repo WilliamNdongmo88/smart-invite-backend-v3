@@ -27,8 +27,8 @@ public class FirebaseStorageServiceImpl implements FirebaseStorageService {
     @Override
     public String upload(MultipartFile file, String folder) {
         try {
-            String extension = getExtension(file.getOriginalFilename());
-            String filename  = folder + "/" + UUID.randomUUID() + extension;
+            String cleanName = sanitizeFilename(file.getOriginalFilename());
+            String filename  = folder + "/" + cleanName;
 
             Storage storage = StorageClient.getInstance().bucket().getStorage();
             BlobId   blobId = BlobId.of(storageBucket, filename);
@@ -86,6 +86,31 @@ public class FirebaseStorageServiceImpl implements FirebaseStorageService {
         } catch (Exception e) {
             log.warn("Erreur suppression Firebase {} : {}", path, e.getMessage());
         }
+    }
+
+    private String sanitizeFilename(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return "image-" + System.currentTimeMillis() + ".webp";
+        }
+        String name = filename.replace("\\", "/");
+        if (name.contains("/")) {
+            name = name.substring(name.lastIndexOf("/") + 1);
+        }
+        int dotIndex = name.lastIndexOf(".");
+        String baseName = dotIndex > 0 ? name.substring(0, dotIndex) : name;
+        String ext = dotIndex > 0 ? name.substring(dotIndex).toLowerCase() : "";
+
+        String normalized = java.text.Normalizer.normalize(baseName, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
+                .toLowerCase()
+                .replaceAll("[^a-z0-9._-]", "-")
+                .replaceAll("-+", "-")
+                .replaceAll("^-|-$", "");
+
+        if (normalized.isBlank()) {
+            normalized = "image-" + System.currentTimeMillis();
+        }
+        return normalized + ext;
     }
 
     private String getExtension(String filename) {
