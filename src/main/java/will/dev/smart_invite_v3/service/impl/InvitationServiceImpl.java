@@ -230,6 +230,20 @@ public class InvitationServiceImpl implements InvitationService {
         return PublicInvitationResponse.from(inv);
     }
 
+    @Override
+    @Transactional
+    @org.springframework.cache.annotation.CacheEvict(cacheNames = will.dev.smart_invite_v3.cache.CacheNames.EVENTS, allEntries = true)
+    public String updateEventPhotoByToken(String token, org.springframework.web.multipart.MultipartFile file, Long userId) {
+        Invitation inv = invitationRepository.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("Invitation introuvable"));
+        Event event = inv.getGuest().getEvent();
+        String url = firebaseStorage.upload(file, activeProfile + "/events/photos");
+        event.setCouplePhotoUrl(url);
+        eventRepository.save(event);
+        log.info("[Invitation] Photo mise à jour pour l'événement {} via token {} -> {}", event.getId(), token, url);
+        return url;
+    }
+
     // ---- Inscription via lien public ----
 
     @Override

@@ -32,4 +32,7 @@ public interface InvitationService {
 
     /** Inscription via lien public — RSVP CONFIRMED immédiat, génère QR+PDF+email remerciement */
     InvitationResponse generateFromLink(Long eventId, CreateGuestRequest request, Long organizerId);
+
+    /** Mettre à jour la photo de couverture/couple de l'événement via le token d'invitation */
+    String updateEventPhotoByToken(String token, org.springframework.web.multipart.MultipartFile file, Long userId);
 }

@@ -95,4 +95,16 @@ public class LinkController {
                 linkService.join(token, request),
                 "Inscription réussie — invitation générée"));
     }
+
+    @PostMapping(value = "/photo/{token}", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Mettre à jour la photo de l'événement via token de lien")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ApiResponse<String>> updatePhoto(
+            @PathVariable String token,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        String url = linkService.updateEventPhotoByToken(token, file, userDetails != null ? userDetails.getUser().getId() : null);
+        return ResponseEntity.ok(ApiResponse.success(url, "Photo de l'événement mise à jour"));
+    }
 }

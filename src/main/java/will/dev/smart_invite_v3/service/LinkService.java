@@ -16,4 +16,5 @@ public interface LinkService {
     void delete(Long linkId, Long organizerId);
     InvitationResponse join(String token, CreateGuestRequest request);
     LinkPreviewResponse preview(String token);
+    String updateEventPhotoByToken(String token, org.springframework.web.multipart.MultipartFile file, Long userId);
 }

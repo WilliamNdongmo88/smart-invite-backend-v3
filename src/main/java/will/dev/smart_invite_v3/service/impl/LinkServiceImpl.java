@@ -18,10 +18,7 @@ import will.dev.smart_invite_v3.exception.EventNotFoundException;
 import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.LinkRepository;
 import will.dev.smart_invite_v3.repository.PaymentRepository;
-import will.dev.smart_invite_v3.service.EmailService;
-import will.dev.smart_invite_v3.service.InvitationService;
-import will.dev.smart_invite_v3.service.LinkService;
-import will.dev.smart_invite_v3.service.WhatsAppService;
+import will.dev.smart_invite_v3.service.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -40,9 +37,13 @@ public class LinkServiceImpl implements LinkService {
     private final WhatsAppService   whatsAppService;
     private final NotificationDispatcher notificationDispatcher;
     private final PaymentRepository paymentRepository;
+    private final FirebaseStorageService firebaseStorage;
 
     @Value("${app.env.apiUrl}")
     private String apiUrl;
+
+    @Value("${spring.profiles.active:dev}")
+    private String activeProfile;
 
     // ---- US-035 ----
 
@@ -133,6 +134,20 @@ public class LinkServiceImpl implements LinkService {
         Link link = linkRepository.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Lien invalide"));
         return LinkPreviewResponse.from(link);
+    }
+
+    @Override
+    @Transactional
+    @org.springframework.cache.annotation.CacheEvict(cacheNames = will.dev.smart_invite_v3.cache.CacheNames.EVENTS, allEntries = true)
+    public String updateEventPhotoByToken(String token, org.springframework.web.multipart.MultipartFile file, Long userId) {
+        Link link = linkRepository.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("Lien introuvable"));
+        Event event = link.getEvent();
+        String url = firebaseStorage.upload(file, activeProfile + "/events/photos");
+        event.setCouplePhotoUrl(url);
+        eventRepository.save(event);
+        log.info("[Link] Photo mise à jour pour l'événement {} via token de lien {} -> {}", event.getId(), token, url);
+        return url;
     }
 
     // ---- Helpers ----
