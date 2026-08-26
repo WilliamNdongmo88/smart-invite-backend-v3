@@ -5,6 +5,8 @@ import will.dev.smart_invite_v3.entity.Invitation;
 import will.dev.smart_invite_v3.enums.EventType;
 import will.dev.smart_invite_v3.enums.InvitationStatus;
 
+import will.dev.smart_invite_v3.enums.RsvpStatus;
+
 import java.time.LocalDateTime;
 
 public record PublicInvitationResponse(
@@ -21,7 +23,9 @@ public record PublicInvitationResponse(
         LocalDateTime civilDateTime,
         String qrCodeUrl,
         String pdfUrl,
-        InvitationStatus status
+        InvitationStatus status,
+        RsvpStatus rsvpStatus,
+        String couplePhotoUrl
 ) {
     public static PublicInvitationResponse from(Invitation inv) {
         Event e = inv.getGuest().getEvent();
@@ -39,7 +43,9 @@ public record PublicInvitationResponse(
                 e.getCivilDateTime(),
                 inv.getQrCodeUrl(),
                 inv.getPdfUrl(),
-                inv.getStatus()
+                inv.getStatus(),
+                inv.getGuest().getRsvpStatus(),
+                e.getCouplePhotoUrl()
         );
     }
 }
