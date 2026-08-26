@@ -5,12 +5,24 @@ const axios = require('axios');
 let isReady = false;
 
 const client = new Client({
-    authStrategy: new LocalAuth({ clientId: 'main' }),
-    webVersionCache: { type: 'local' },
+
+    authStrategy: new LocalAuth({clientId: 'main'}),
+
+    webVersionCache: {type: 'local'},
+
     puppeteer: {
         headless: process.env.NODE_ENV === 'production' ? true : false,
-        executablePath: process.env.NODE_ENV === 'production' ? '/usr/bin/chromium' : undefined,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-extensions']
+        executablePath: process.env.NODE_ENV === 'production'
+            ? '/usr/bin/chromium'
+            : undefined,
+
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--disable-extensions'
+        ]
     }
 });
 
@@ -28,17 +40,23 @@ client.on('qr', (qr) => {
 });
 
 client.on('authenticated', () => console.log('[WhatsApp] Authentifié ✅'));
+
 client.on('ready', () => { isReady = true; console.log('[WhatsApp] Client connecté et prêt. ✅'); });
-client.on('auth_failure', (msg) => { isReady = false; console.error('[WhatsApp] Échec authentification ❌ :', msg); });
+
 client.on('loading_screen', (p, m) => console.log('[WhatsApp] ⏳ Chargement :', p, m));
-client.on('disconnected', (reason) => {
-    isReady = false;
-    console.warn('[WhatsApp] Déconnecté :', reason);
-    setTimeout(() => client.initialize(), 5000);
-});
+
+client.on('auth_failure', (msg) => { isReady = false; console.error('[WhatsApp] Échec authentification ❌ :', msg); });
+
+/**
+ * Initialisation
+ */
+console.log('🚀 Initialisation WhatsApp');
+client.initialize();
 
 // Listener des réponses OUI / NON
 client.on('message', async (msg) => {
+    if (!isReady) {throw new Error('WhatsApp non prêt');}
+
     if (msg.fromMe) return;
 
     const contact = await msg.getContact();
@@ -148,7 +166,5 @@ client.on('message', async (msg) => {
             `⚠️ Une erreur est survenue lors du traitement de votre réponse. Veuillez réessayer.`);
     }
 });
-
-client.initialize();
 
 module.exports = { client, isReady: () => isReady, registerRsvp };
