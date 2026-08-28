@@ -238,7 +238,10 @@ public class InvitationServiceImpl implements InvitationService {
                 .orElseThrow(() -> new RuntimeException("Invitation introuvable"));
         Event event = inv.getGuest().getEvent();
         String url = firebaseStorage.upload(file, activeProfile + "/events/photos");
+
+        // Mettre à jour la colonne dédiée
         event.setCouplePhotoUrl(url);
+
         eventRepository.save(event);
         log.info("[Invitation] Photo mise à jour pour l'événement {} via token {} -> {}", event.getId(), token, url);
         return url;

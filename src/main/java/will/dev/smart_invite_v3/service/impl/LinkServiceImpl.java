@@ -144,9 +144,12 @@ public class LinkServiceImpl implements LinkService {
                 .orElseThrow(() -> new RuntimeException("Lien introuvable"));
         Event event = link.getEvent();
         String url = firebaseStorage.upload(file, activeProfile + "/events/photos");
+
+        // Mettre à jour la colonne dédiée
         event.setCouplePhotoUrl(url);
-        eventRepository.save(event);
-        log.info("[Link] Photo mise à jour pour l'événement {} via token de lien {} -> {}", event.getId(), token, url);
+
+        Event saved = eventRepository.save(event);
+        log.info("[Link] Photo mise à jour pour l'événement {} via token de lien {} -> {}", saved.getId(), token, url);
         return url;
     }
 
