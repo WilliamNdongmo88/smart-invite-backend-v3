@@ -33,7 +33,15 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
         // Appliquer le rate limit uniquement sur les endpoints API
-        return !path.startsWith("/api/");
+        if (!path.startsWith("/api/")) return true;
+
+        // Exclure localhost / 127.0.0.1 (développement)
+        String ip = getClientIp(request);
+        return "127.0.0.1".equals(ip)
+                || "0:0:0:0:0:0:0:1".equals(ip)
+                || "::1".equals(ip)
+                || ip.startsWith("192.168.")
+                || ip.startsWith("10.");
     }
 
     @Override
