@@ -30,6 +30,7 @@ public class WeddingDetailsContentData {
     private Gallery      gallery;
     private Backgrounds  backgrounds;
     private Footer       footer;
+    private Theme        theme;
 
     // ── Hero ──────────────────────────────────────────────────────────
     @Data @NoArgsConstructor @AllArgsConstructor @Builder
@@ -180,5 +181,26 @@ public class WeddingDetailsContentData {
         private String logoText;
         private String subText;
         private String loveText;
+    }
+
+    // ── Theme ─────────────────────────────────────────────────────────
+    /**
+     * Miroir exact de WeddingDetailsTheme (TypeScript).
+     * Tous les champs sont stockés à plat dans le JSONB.
+     */
+    @Data @NoArgsConstructor @AllArgsConstructor @Builder
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Theme {
+        private String preset;
+        private String colorBackground;
+        private String colorAccent;
+        private String colorAccentSecondary;
+        private String colorAccentDeep;
+        private String colorText;
+        private String colorTextSecondary;
+        private String colorCardBg;
+        private String colorSectionBg;
+        private String colorSurface;
+        private String overlayColor;
     }
 }

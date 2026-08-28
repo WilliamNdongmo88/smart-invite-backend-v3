@@ -18,7 +18,8 @@ public record WeddingEventPayloadRequest(
         WeddingDetailsContentData.Rsvp rsvp,
         WeddingDetailsContentData.Gallery gallery,
         WeddingDetailsContentData.Backgrounds backgrounds,
-        WeddingDetailsContentData.Footer footer
+        WeddingDetailsContentData.Footer footer,
+        WeddingDetailsContentData.Theme theme
 ) implements EventPayloadRequest {
 
     public WeddingDetailsContentData toContentData() {
@@ -33,6 +34,7 @@ public record WeddingEventPayloadRequest(
                 .gallery(gallery)
                 .backgrounds(backgrounds)
                 .footer(footer)
+                .theme(theme)
                 .build();
     }
 
