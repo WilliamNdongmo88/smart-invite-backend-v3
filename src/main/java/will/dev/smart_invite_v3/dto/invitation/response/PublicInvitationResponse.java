@@ -2,6 +2,7 @@ package will.dev.smart_invite_v3.dto.invitation.response;
 
 import will.dev.smart_invite_v3.entity.Event;
 import will.dev.smart_invite_v3.entity.Invitation;
+import will.dev.smart_invite_v3.entity.WeddingDetailsContentData;
 import will.dev.smart_invite_v3.enums.EventType;
 import will.dev.smart_invite_v3.enums.InvitationStatus;
 
@@ -25,10 +26,18 @@ public record PublicInvitationResponse(
         String pdfUrl,
         InvitationStatus status,
         RsvpStatus rsvpStatus,
-        String couplePhotoUrl
+        String couplePhotoUrl,
+        /** Thème visuel — non null uniquement pour eventType == MARIAGE */
+        WeddingDetailsContentData.Theme theme
 ) {
     public static PublicInvitationResponse from(Invitation inv) {
         Event e = inv.getGuest().getEvent();
+
+        WeddingDetailsContentData.Theme theme = null;
+        if (e.getType() == EventType.MARIAGE && e.getWeddingDetailsContent() != null) {
+            theme = e.getWeddingDetailsContent().getTheme();
+        }
+
         return new PublicInvitationResponse(
                 inv.getGuest().getFullName(),
                 e.getTitle(),
@@ -45,7 +54,8 @@ public record PublicInvitationResponse(
                 inv.getPdfUrl(),
                 inv.getStatus(),
                 inv.getGuest().getRsvpStatus(),
-                e.getCouplePhotoUrl()
+                e.getCouplePhotoUrl(),
+                theme
         );
     }
 }
