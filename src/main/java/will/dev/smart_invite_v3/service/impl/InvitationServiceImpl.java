@@ -307,6 +307,7 @@ public class InvitationServiceImpl implements InvitationService {
      */
     private String buildEventPageUrl(Event event) {
         if (event.getType() == null) return frontendUrl;
+
         String path = switch (event.getType()) {
             case MARIAGE    -> "/events/" + event.getId() + "/wedding?preview_details=true";
             case CONFERENCE -> "/events/" + event.getId() + "/conference?preview_details=true";
