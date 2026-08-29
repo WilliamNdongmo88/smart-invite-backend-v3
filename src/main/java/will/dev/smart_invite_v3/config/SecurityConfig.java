@@ -75,6 +75,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,  "/api/link/preview/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/link/join/*").permitAll()
 
+                        // Vue publique d'un événement (mode preview invité — sans auth)
+                        .requestMatchers(HttpMethod.GET,  "/api/events/*/public").permitAll()
+
                         // Admin
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 

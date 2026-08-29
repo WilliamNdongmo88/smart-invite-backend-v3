@@ -37,22 +37,23 @@ public class NotificationDispatcher {
     }
 
     /**
-     * Envoie la confirmation (QR + PDF) selon le canal choisi.
+     * Envoie la confirmation (QR + lien page événement) selon le canal choisi.
+     * Le PDF n'est plus joint — le lien vers la page de l'événement est envoyé à la place.
      */
     public void sendConfirmation(NotificationMode mode,
                                  String email, String phoneNumber,
                                  String guestName, EventType eventType, String eventTitle,
-                                 byte[] qrBytes, byte[] pdfBytes,
-                                 String qrCodeUrl, String pdfUrl,
+                                 byte[] qrBytes,
+                                 String qrCodeUrl, String eventPageUrl,
                                  boolean fromLink) {
         if (shouldSendEmail(mode) && hasValue(email)) {
             trySend("email confirmation", () ->
-                emailService.sendConfirmationEmail(email, guestName, eventType, eventTitle, qrBytes, pdfBytes));
+                emailService.sendConfirmationEmail(email, guestName, eventType, eventTitle, qrBytes, eventPageUrl));
         }
         if (shouldSendWhatsApp(mode) && hasValue(phoneNumber)) {
             String prefix = fromLink && eventType != null ? eventType.invitationPrefix() : null;
             trySend("WhatsApp confirmation", () ->
-                whatsAppService.sendConfirmationMessage(phoneNumber, guestName, prefix, eventTitle, qrBytes, pdfBytes));
+                whatsAppService.sendConfirmationMessage(phoneNumber, guestName, prefix, eventTitle, qrBytes, eventPageUrl));
         }
     }
 

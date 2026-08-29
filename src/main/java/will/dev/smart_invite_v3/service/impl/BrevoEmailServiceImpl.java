@@ -117,15 +117,19 @@ public class BrevoEmailServiceImpl implements EmailService {
     @Override
     public void sendConfirmationEmail(String toEmail, String guestName,
                                       EventType eventType, String eventTitle,
-                                      byte[] qrCodeBytes, byte[] pdfBytes) {
+                                      byte[] qrCodeBytes, String eventPageUrl) {
         String prefix = eventType != null ? eventType.invitationPrefix() : "à ";
         String html = emailTemplateService.render(Map.of(
                 "subject",  "Confirmation de présence — " + eventTitle,
                 "title",    "Merci pour votre confirmation !",
                 "content",  "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/>" +
                             "Merci d'avoir confirmé votre présence " + prefix + " <strong>" + eventTitle + "</strong>.<br/>" +
-                            "Vous trouverez en pièce jointe votre QR code et votre carte d'invitation.<br/>" +
-                            "Présentez votre QR code à l'entrée."
+                            "Vous trouverez en pièce jointe votre QR code d'accès.<br/>" +
+                            "Consultez également la page de l'événement pour tous les détails :<br/>" +
+                            "<a href=\"" + eventPageUrl + "\" style=\"color:#c9a84c;\">Voir la page de l'événement</a><br/>" +
+                            "Présentez votre QR code à l'entrée.",
+                "ctaUrl",   eventPageUrl,
+                "ctaLabel", "Voir la page de l'événement"
         ));
         List<SendSmtpEmailAttachment> attachments = new java.util.ArrayList<>();
         if (qrCodeBytes != null) {
@@ -133,12 +137,6 @@ public class BrevoEmailServiceImpl implements EmailService {
             qrAttachment.setContent(qrCodeBytes);
             qrAttachment.setName("qrcode.png");
             attachments.add(qrAttachment);
-        }
-        if (pdfBytes != null) {
-            SendSmtpEmailAttachment pdfAttachment = new SendSmtpEmailAttachment();
-            pdfAttachment.setContent(pdfBytes);
-            pdfAttachment.setName("invitation.pdf");
-            attachments.add(pdfAttachment);
         }
         sendEmail(toEmail, "Confirmation de présence — " + eventTitle, html, attachments);
     }

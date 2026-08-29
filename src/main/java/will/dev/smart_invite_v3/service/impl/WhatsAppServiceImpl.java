@@ -66,7 +66,7 @@ public class WhatsAppServiceImpl implements WhatsAppService {
     @Override
     public void sendConfirmationMessage(String phoneNumber, String guestName,
                                         String eventTypePrefix, String eventTitle,
-                                        byte[] qrBytes, byte[] pdfBytes) {
+                                        byte[] qrBytes, String eventPageUrl) {
         String message = eventTypePrefix != null ? String.join("\n",
                 "╔═════════════════════╗",
                 "               ✉️ *SMART INVITE*",
@@ -77,14 +77,17 @@ public class WhatsAppServiceImpl implements WhatsAppService {
                 "Merci *" + guestName + "* d'avoir confirmé votre présence "
                 + eventTypePrefix + " *" + eventTitle + "*.",
                 "",
-                "📄 Ci-dessous joint vos documents (QR Code et carte d'invitation)",
+                "📄 Votre QR code d'accès est joint ci-dessous.",
+                "",
+                "🌐 Consultez la page de l'événement pour tous les détails :",
+                eventPageUrl,
                 "",
                 "━━━━━━━━━━━━━━━━━━━━━━",
                 "               🌐 smart-invite.com",
                 "━━━━━━━━━━━━━━━━━━━━━━"
         ) : null;
 
-        sendFiles(phoneNumber, message, qrBytes, pdfBytes);
+        sendFiles(phoneNumber, message, qrBytes, null);
     }
 
     @Override

@@ -194,7 +194,7 @@ public class InvitationServiceImpl implements InvitationService {
                         buildRsvpWhatsAppMessage(guest.getFullName(), event.getTitle(), event.getType(), request.status().name()))
         );
 
-        // Génération QR + PDF + envoi confirmation si CONFIRMED
+        // Génération QR + envoi confirmation si CONFIRMED (plus de PDF)
         if (request.status() == RsvpStatus.CONFIRMED) {
             checkQuotaAvailable(event.getId());
             try {
@@ -204,14 +204,10 @@ public class InvitationServiceImpl implements InvitationService {
                 byte[] qrBytes = qrCodeService.generateWithColor(publicUrl);
                 String qrUrl = firebaseStorage.uploadBytes(qrBytes, folder, token + "_qr.png", "image/png");
 
-                InvitationCard card = cardRepository.findByEventId(event.getId()).orElse(null);
-                byte[] pdfBytes = buildPdfBytes(event, card, qrBytes, guest.getFullName());
-                String pdfUrl = pdfBytes != null
-                        ? firebaseStorage.uploadBytes(pdfBytes, folder, token + "_invitation.pdf", "application/pdf")
-                        : null;
+                // Lien vers la page de l'événement (avec mode prévisualisation)
+                String eventPageUrl = buildEventPageUrl(event);
 
                 inv.setQrCodeUrl(qrUrl);
-                inv.setPdfUrl(pdfUrl);
                 inv.setIsInvitationSent(true);
                 invitationRepository.save(inv);
 
@@ -219,7 +215,7 @@ public class InvitationServiceImpl implements InvitationService {
                         guest.getNotificationMode(),
                         guest.getEmail(), guest.getPhoneNumber(),
                         guest.getFullName(), event.getType(), event.getTitle(),
-                        qrBytes, pdfBytes, qrUrl, pdfUrl, false);
+                        qrBytes, qrUrl, eventPageUrl, false);
                 incrementSentInvitations(event.getId());
 
             } catch (Exception e) {
@@ -272,17 +268,11 @@ public class InvitationServiceImpl implements InvitationService {
 
         byte[] qrBytes = null;
         String qrUrl = null;
-        byte[] pdfBytes = null;
-        String pdfUrl = null;
         try {
             qrBytes = qrCodeService.generateWithColor(publicUrl);
             qrUrl = firebaseStorage.uploadBytes(qrBytes, folder, token + "_qr.png", "image/png");
-            InvitationCard card = cardRepository.findByEventId(event.getId()).orElse(null);
-            pdfBytes = buildPdfBytes(event, card, qrBytes, guest.getFullName());
-            if (pdfBytes != null)
-                pdfUrl = firebaseStorage.uploadBytes(pdfBytes, folder, token + "_invitation.pdf", "application/pdf");
         } catch (Exception e) {
-            log.warn("Erreur génération QR/PDF via lien pour {} : {}", guest.getEmail(), e.getMessage());
+            log.warn("Erreur génération QR via lien pour {} : {}", guest.getEmail(), e.getMessage());
         }
 
         Invitation invitation = Invitation.builder()
@@ -290,18 +280,18 @@ public class InvitationServiceImpl implements InvitationService {
                 .event(event)
                 .token(token)
                 .qrCodeUrl(qrUrl)
-                .pdfUrl(pdfUrl)
                 .status(InvitationStatus.ACTIVE)
                 .isInvitationSent(true)
                 .build();
         invitation = invitationRepository.save(invitation);
 
         if (qrBytes != null) {
+            String eventPageUrl = buildEventPageUrl(event);
             notificationDispatcher.sendConfirmation(
                     guest.getNotificationMode(),
                     guest.getEmail(), guest.getPhoneNumber(),
                     guest.getFullName(), event.getType(), event.getTitle(),
-                    qrBytes, pdfBytes, qrUrl, pdfUrl, true);
+                    qrBytes, qrUrl, eventPageUrl, true);
             incrementSentInvitations(event.getId());
         }
 
@@ -309,6 +299,22 @@ public class InvitationServiceImpl implements InvitationService {
     }
 
     // ---- Core generation ----
+
+    /**
+     * Construit l'URL de la page de l'événement côté frontend pour les invités.
+     * Utilise ?preview_details=true (distinct de ?preview=true réservé à l'organisateur).
+     * Ex : http://localhost:4200/events/2/wedding?preview_details=true
+     */
+    private String buildEventPageUrl(Event event) {
+        if (event.getType() == null) return frontendUrl;
+        String path = switch (event.getType()) {
+            case MARIAGE    -> "/events/" + event.getId() + "/wedding?preview_details=true";
+            case CONFERENCE -> "/events/" + event.getId() + "/conference?preview_details=true";
+            case GALA       -> "/events/" + event.getId() + "/gala?preview_details=true";
+            case CEREMONIE  -> "/events/" + event.getId() + "/ceremonie?preview_details=true";
+        };
+        return frontendUrl + path;
+    }
 
     private InvitationResponse doGenerate(Guest guest, Event event) {
         String token = UUID.randomUUID().toString();

@@ -20,8 +20,8 @@ public interface EmailService {
                              EventType eventType, String rsvpLink);
 
     void sendConfirmationEmail(String toEmail, String guestName,
-                               EventType eventType,String eventTitle,
-                               byte[] qrCodeBytes, byte[] pdfBytes);
+                               EventType eventType, String eventTitle,
+                               byte[] qrCodeBytes, String eventPageUrl);
 
     void sendReminderEmail(String toEmail, String guestName, String eventTitle,
                            String qrCodeUrl, String pdfUrl);

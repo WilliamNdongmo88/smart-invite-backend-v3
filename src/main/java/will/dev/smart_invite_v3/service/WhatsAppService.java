@@ -8,7 +8,7 @@ public interface WhatsAppService {
                                String eventTypePrefix, String token);
 
     void sendConfirmationMessage(String phoneNumber, String guestName, String eventTitle,
-                                 String eventTypePrefix, byte[] qrBytes, byte[] pdfBytes);
+                                 String eventTypePrefix, byte[] qrBytes, String eventPageUrl);
 
     void sendNewSubscriberMessage(String adminPhone, String userName, String userEmail, String userPhone);
 
