@@ -120,9 +120,8 @@ public class EventServiceImpl implements EventService {
         event.setDateLabel(request.extractDateLabel());
         event.setVenueName(request.extractVenueName());
         event.setVenueCity(request.extractVenueCity());
-        if (request.extractCoverPhotoUrl() != null) {
-            event.setCouplePhotoUrl(request.extractCoverPhotoUrl());
-        }
+        // couplePhotoUrl est géré exclusivement via uploadCouplePhoto() et updateEventPhotoByToken()
+        // — jamais depuis un payload de contenu, pour ne pas écraser la photo uploadée par les invités.
 
         applyContentPayload(event, request);
 
