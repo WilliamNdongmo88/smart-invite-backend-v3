@@ -1,7 +1,7 @@
-const express = require('express');
-const router = express.Router();
+const express  = require('express');
+const router   = express.Router();
 const { MessageMedia } = require('whatsapp-web.js');
-const { client, isReady, registerRsvp } = require('../whatsapp');
+const { getClient, isReady, registerRsvp } = require('../whatsapp');
 
 // Middleware : vérification du secret partagé
 router.use((req, res, next) => {
@@ -30,7 +30,7 @@ router.post('/send', async (req, res) => {
     const chatId = `${normalized}@c.us`;
 
     try {
-        await client.sendMessage(chatId, message);
+        await getClient().sendMessage(chatId, message);
         console.log(`[WhatsApp] Message envoyé à ${chatId}`);
         res.json({ success: true, to: chatId });
     } catch (err) {
@@ -55,16 +55,25 @@ router.post('/send-files', async (req, res) => {
     const chatId = `${normalized}@c.us`;
 
     try {
-        if (message) await client.sendMessage(chatId, message);
+        const c = getClient();
+        if (message)   await c.sendMessage(chatId, message);
 
         if (qrBase64) {
             const qrMedia = new MessageMedia('image/png', qrBase64, 'qrcode.png');
-            await client.sendMessage(chatId, qrMedia, { caption: '📱 *Votre QR Code d\'accès*\nPrésentez-le à l\'entrée de l\'événement.' });
+            await c.sendMessage(chatId, qrMedia, {
+                caption: '📱 *Votre QR Code d\'accès*\nPrésentez-le à l\'entrée de l\'événement.',
+            });
         }
 
         if (pdfBase64) {
-            const pdfMedia = new MessageMedia('application/pdf', pdfBase64, req.body.pdfFileName || 'invitation.pdf');
-            await client.sendMessage(chatId, pdfMedia, { caption: req.body.pdfCaption || '🎫 *Votre carte d\'invitation*' });
+            const pdfMedia = new MessageMedia(
+                'application/pdf',
+                pdfBase64,
+                req.body.pdfFileName || 'invitation.pdf'
+            );
+            await c.sendMessage(chatId, pdfMedia, {
+                caption: req.body.pdfCaption || '🎫 *Votre carte d\'invitation*',
+            });
         }
 
         console.log(`[WhatsApp] Fichiers envoyés à ${chatId}`);
@@ -77,8 +86,7 @@ router.post('/send-files', async (req, res) => {
 
 /**
  * POST /register-rsvp
- * Body: { phoneNumber, token, guestName, eventTitle }
- * Enregistre le mapping numéro → token pour intercepter la réponse OUI/NON
+ * Body: { phoneNumber, token, guestName, eventTitle, eventType }
  */
 router.post('/register-rsvp', (req, res) => {
     const { phoneNumber, token, guestName, eventTitle, eventType } = req.body;
