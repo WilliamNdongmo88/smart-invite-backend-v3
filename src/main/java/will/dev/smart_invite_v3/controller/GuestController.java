@@ -9,14 +9,17 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import will.dev.smart_invite_v3.dto.auth.response.ApiResponse;
 import will.dev.smart_invite_v3.dto.guest.request.AddGuestRequest;
 import will.dev.smart_invite_v3.dto.guest.request.BulkDeleteRequest;
 import will.dev.smart_invite_v3.dto.guest.request.UpdateGuestRequest;
 import will.dev.smart_invite_v3.dto.guest.response.GuestResponse;
+import will.dev.smart_invite_v3.dto.guest.response.ImportGuestResult;
 import will.dev.smart_invite_v3.enums.RsvpStatus;
 import will.dev.smart_invite_v3.security.CustomUserDetails;
 import will.dev.smart_invite_v3.service.GuestService;
@@ -98,5 +101,16 @@ public class GuestController {
     ) {
         guestService.sendReminder(guestId, userDetails.getUser().getId());
         return ResponseEntity.ok(ApiResponse.success(null, "Rappel envoyé"));
+    }
+
+    @PostMapping(value = "/api/events/{eventId}/guests/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Importer des invités depuis un fichier Excel (.xlsx)")
+    public ResponseEntity<ApiResponse<ImportGuestResult>> importExcel(
+            @PathVariable Long eventId,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        ImportGuestResult result = guestService.importFromExcel(eventId, file, userDetails.getUser().getId());
+        return ResponseEntity.ok(ApiResponse.success(result, "Import terminé"));
     }
 }

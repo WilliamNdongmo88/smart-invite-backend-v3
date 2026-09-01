@@ -2,10 +2,12 @@ package will.dev.smart_invite_v3.service;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 import will.dev.smart_invite_v3.dto.guest.request.AddGuestRequest;
 import will.dev.smart_invite_v3.dto.guest.request.BulkDeleteRequest;
 import will.dev.smart_invite_v3.dto.guest.request.UpdateGuestRequest;
 import will.dev.smart_invite_v3.dto.guest.response.GuestResponse;
+import will.dev.smart_invite_v3.dto.guest.response.ImportGuestResult;
 import will.dev.smart_invite_v3.enums.RsvpStatus;
 
 public interface GuestService {
@@ -28,4 +30,7 @@ public interface GuestService {
 
     /** US-019 — Envoi rappel */
     void sendReminder(Long guestId, Long organizerId);
+
+    /** Import en masse depuis un fichier Excel (.xlsx) */
+    ImportGuestResult importFromExcel(Long eventId, MultipartFile file, Long organizerId);
 }

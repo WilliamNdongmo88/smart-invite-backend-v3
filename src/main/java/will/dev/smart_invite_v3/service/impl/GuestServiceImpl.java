@@ -2,17 +2,22 @@ package will.dev.smart_invite_v3.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import will.dev.smart_invite_v3.dto.guest.request.AddGuestRequest;
 import will.dev.smart_invite_v3.dto.guest.request.BulkDeleteRequest;
 import will.dev.smart_invite_v3.dto.guest.request.UpdateGuestRequest;
 import will.dev.smart_invite_v3.dto.guest.response.GuestResponse;
+import will.dev.smart_invite_v3.dto.guest.response.ImportGuestResult;
 import will.dev.smart_invite_v3.entity.Event;
 import will.dev.smart_invite_v3.entity.Guest;
 import will.dev.smart_invite_v3.entity.Invitation;
+import will.dev.smart_invite_v3.enums.NotificationMode;
 import will.dev.smart_invite_v3.enums.RsvpStatus;
 import will.dev.smart_invite_v3.exception.EventAccessDeniedException;
 import will.dev.smart_invite_v3.exception.EventNotFoundException;
@@ -20,10 +25,13 @@ import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.GuestRepository;
 import will.dev.smart_invite_v3.repository.InvitationRepository;
 import will.dev.smart_invite_v3.repository.PaymentRepository;
-import will.dev.smart_invite_v3.enums.NotificationMode;
 import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.GuestService;
 import will.dev.smart_invite_v3.service.WhatsAppService;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -171,6 +179,98 @@ public class GuestServiceImpl implements GuestService {
             throw new RuntimeException(
                 "Impossible d'envoyer le rappel : aucun contact valide pour le mode " + mode);
         }
+    }
+
+    // ---- Import Excel ----
+
+    @Override
+    @Transactional
+    public ImportGuestResult importFromExcel(Long eventId, MultipartFile file, Long organizerId) {
+        Event event = resolveOwned(eventId, organizerId);
+        int imported = 0;
+        int skipped  = 0;
+        List<String> errors = new ArrayList<>();
+
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+            // Ligne 0 = en-têtes, on commence à 1
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+
+                String fullName = cellStr(row, 0);
+                String email    = cellStr(row, 1);
+                String phone    = cellStr(row, 2);
+                String notifRaw = cellStr(row, 3);
+                String tableRaw = cellStr(row, 4);
+
+                if (fullName == null || fullName.isBlank()) {
+                    errors.add("Ligne " + (i + 1) + " ignorée : nom vide");
+                    skipped++;
+                    continue;
+                }
+
+                // Vérification doublons
+                if (email != null && !email.isBlank()
+                        && guestRepository.existsByEventIdAndEmail(eventId, email)) {
+                    errors.add("Ligne " + (i + 1) + " ignorée : email '" + email + "' déjà existant");
+                    skipped++;
+                    continue;
+                }
+                if (phone != null && !phone.isBlank()
+                        && guestRepository.existsByEventIdAndPhoneNumber(eventId, phone)) {
+                    errors.add("Ligne " + (i + 1) + " ignorée : téléphone '" + phone + "' déjà existant");
+                    skipped++;
+                    continue;
+                }
+
+                // Quota
+                int approvedQuota = paymentRepository.sumApprovedQuotaByEventId(eventId);
+                int currentCount  = guestRepository.countByEventId(eventId);
+                if (approvedQuota > 0 && currentCount >= approvedQuota) {
+                    errors.add("Ligne " + (i + 1) + " et suivantes ignorées : quota atteint (" + approvedQuota + ")");
+                    break;
+                }
+
+                NotificationMode mode = NotificationMode.EMAIL; // défaut
+                if (notifRaw != null) {
+                    try { mode = NotificationMode.valueOf(notifRaw.toUpperCase().trim()); }
+                    catch (IllegalArgumentException ignored) {}
+                }
+
+                Integer tableNumber = null;
+                if (tableRaw != null && !tableRaw.isBlank()) {
+                    try { tableNumber = Integer.parseInt(tableRaw.trim()); }
+                    catch (NumberFormatException ignored) {}
+                }
+
+                Guest guest = Guest.builder()
+                        .event(event)
+                        .fullName(fullName)
+                        .email(email != null && !email.isBlank() ? email : null)
+                        .phoneNumber(phone != null && !phone.isBlank() ? phone : null)
+                        .notificationMode(mode)
+                        .tableNumber(tableNumber)
+                        .build();
+                guestRepository.save(guest);
+                imported++;
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Impossible de lire le fichier Excel : " + e.getMessage());
+        }
+
+        return new ImportGuestResult(imported, skipped, errors);
+    }
+
+    private String cellStr(Row row, int col) {
+        Cell cell = row.getCell(col, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+        if (cell == null) return null;
+        return switch (cell.getCellType()) {
+            case STRING  -> cell.getStringCellValue().trim();
+            case NUMERIC -> String.valueOf((long) cell.getNumericCellValue());
+            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+            default      -> null;
+        };
     }
 
     // ---- Helpers ----
