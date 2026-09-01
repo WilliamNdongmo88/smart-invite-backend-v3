@@ -188,30 +188,59 @@ public class WhatsAppServiceImpl implements WhatsAppService {
     @Override
     public void sendThankYouMessage(String phoneNumber, String guestName,
                                     String eventTitle, String eventTypePrefix,
+                                    String concernedNames,
+                                    will.dev.smart_invite_v3.enums.EventType eventType,
                                     ThankYouTemplate template) {
-        String accroche   = template != null ? template.getAccroche()    : ThankYouTemplate.DEFAULT_ACCROCHE;
-        String corps1     = template != null ? template.getCorpsLigne1() : ThankYouTemplate.DEFAULT_CORPS_1;
-        String corps2     = template != null ? template.getCorpsLigne2() : ThankYouTemplate.DEFAULT_CORPS_2;
-        String conclusion = template != null ? template.getConclusion()  : ThankYouTemplate.DEFAULT_CONCLUSION;
 
-        String message = String.join("\n",
-                "╔═════════════════════╗",
-                "               ✉️ *SMART INVITE*",
-                "╚═════════════════════╝",
-                "",
-                accroche,
-                "",
-                "Cher(e) *" + guestName + "*,",
-                "",
-                corps1,
-                corps2,
-                "",
-                conclusion,
-                "",
-                "━━━━━━━━━━━━━━━━━━━━━━",
-                "               🌐 smart-invite.com",
-                "━━━━━━━━━━━━━━━━━━━━━━"
-        );
+        String message;
+
+        if (template == null && eventType == will.dev.smart_invite_v3.enums.EventType.MARIAGE) {
+            // ── Message MARIAGE par défaut ──────────────────────────────
+            String names = concernedNames != null ? concernedNames : eventTitle;
+            message = String.join("\n",
+                    "Bonjour *" + guestName + "* 👋",
+                    "",
+                    "💐 *" + names + "* tiennent à vous adresser leurs sincères remerciements pour votre présence à leur mariage.",
+                    "",
+                    "Votre présence, vos sourires et votre affection ont largement contribué à rendre cette belle journée encore plus spéciale et inoubliable. ❤️",
+                    "",
+                    "Nous avons été très heureux de partager ce moment précieux avec vous et espérons avoir le plaisir de vous retrouver très bientôt pour de nouvelles occasions de partage et de bonheur.",
+                    "",
+                    "Avec toute notre gratitude et nos sincères remerciements,",
+                    "",
+                    "*" + names + "* 💕",
+                    "",
+                    "━━━━━━━━━━━━━━━",
+                    "❤️ Merci d'avoir partagé ce merveilleux moment avec nous.",
+                    "━━━━━━━━━━━━━━━"
+            );
+        } else {
+            // ── Message générique ou template custom ────────────────────
+            String accroche   = template != null ? template.getAccroche()    : ThankYouTemplate.DEFAULT_ACCROCHE;
+            String corps1     = template != null ? template.getCorpsLigne1() : ThankYouTemplate.DEFAULT_CORPS_1 + " " + eventTypePrefix;
+            String corps2     = template != null ? template.getCorpsLigne2() : ThankYouTemplate.DEFAULT_CORPS_2;
+            String conclusion = template != null ? template.getConclusion()  : ThankYouTemplate.DEFAULT_CONCLUSION;
+
+            message = String.join("\n",
+                    "╔═════════════════════╗",
+                    "               ✉️ *SMART INVITE*",
+                    "╚═════════════════════╝",
+                    "",
+                    accroche,
+                    "",
+                    "Cher(e) *" + guestName + "*,",
+                    "",
+                    corps1,
+                    corps2,
+                    "",
+                    conclusion,
+                    "",
+                    "━━━━━━━━━━━━━━━━━━━━━━",
+                    "               🌐 smart-invite.com",
+                    "━━━━━━━━━━━━━━━━━━━━━━"
+            );
+        }
+
         send(phoneNumber, message);
     }
 

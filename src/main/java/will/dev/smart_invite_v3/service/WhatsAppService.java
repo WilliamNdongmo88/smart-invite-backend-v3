@@ -15,7 +15,9 @@ public interface WhatsAppService {
     void sendOrganizerTextMessage(String phoneNumber, String message);
 
     void sendThankYouMessage(String phoneNumber, String guestName, String eventTitle,
-                             String eventTypePrefix, ThankYouTemplate template);
+                             String eventTypePrefix, String concernedNames,
+                             will.dev.smart_invite_v3.enums.EventType eventType,
+                             ThankYouTemplate template);
 
     void sendAgentCredentialsMessage(String phoneNumber, String userName, String password);
 

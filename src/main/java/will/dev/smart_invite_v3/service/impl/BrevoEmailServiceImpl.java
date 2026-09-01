@@ -210,21 +210,48 @@ public class BrevoEmailServiceImpl implements EmailService {
 
     @Override
     public void sendThankYouEmail(String toEmail, String guestName, String eventTitle,
-                                  EventType eventType, ThankYouTemplate template) {
-        String accroche   = template != null ? template.getAccroche()    : ThankYouTemplate.DEFAULT_ACCROCHE;
-        String corps1     = template != null ? template.getCorpsLigne1() : ThankYouTemplate.DEFAULT_CORPS_1;
-        String corps2     = template != null ? template.getCorpsLigne2() : ThankYouTemplate.DEFAULT_CORPS_2;
-        String conclusion = template != null ? template.getConclusion()  : ThankYouTemplate.DEFAULT_CONCLUSION;
+                                  EventType eventType, String concernedNames, ThankYouTemplate template) {
 
-        String html = emailTemplateService.render(Map.of(
-                "subject", "Merci pour votre présence — " + eventTitle,
-                "title",   accroche,
-                "content", "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/>" +
-                           corps1 + " <strong>" + eventTitle + "</strong>.<br/>" +
-                           corps2 + "<br/>" +
-                           conclusion
-        ));
-        sendEmail(toEmail, "Merci pour votre présence — " + eventTitle, html, List.of());
+        String subject = "Merci pour votre présence — " + eventTitle;
+        String html;
+
+        if (template == null && eventType == EventType.MARIAGE) {
+            // ── Email MARIAGE par défaut ─────────────────────────────────
+            String names = concernedNames != null ? concernedNames : eventTitle;
+            html = emailTemplateService.render(Map.of(
+                    "subject", subject,
+                    "title",   "Merci pour votre présence 💐",
+                    "content", "Bonjour <strong style=\"color:#c9a84c;\">" + guestName + "</strong> 👋<br/><br/>" +
+                               "💐 <strong>" + names + "</strong> tiennent à vous adresser leurs sincères remerciements " +
+                               "pour votre présence à leur mariage.<br/><br/>" +
+                               "Votre présence, vos sourires et votre affection ont largement contribué à rendre " +
+                               "cette belle journée encore plus spéciale et inoubliable. ❤️<br/><br/>" +
+                               "Nous avons été très heureux de partager ce moment précieux avec vous et espérons " +
+                               "avoir le plaisir de vous retrouver très bientôt pour de nouvelles occasions de " +
+                               "partage et de bonheur.<br/><br/>" +
+                               "Avec toute notre gratitude et nos sincères remerciements,<br/><br/>" +
+                               "<strong>" + names + "</strong> 💕<br/><br/>" +
+                               "<hr style=\"border:none;border-top:1px solid #333;margin:16px 0;\"/>" +
+                               "❤️ Merci d'avoir partagé ce merveilleux moment avec nous."
+            ));
+        } else {
+            // ── Email générique ou template custom ───────────────────────
+            String accroche   = template != null ? template.getAccroche()    : ThankYouTemplate.DEFAULT_ACCROCHE;
+            String corps1     = template != null ? template.getCorpsLigne1() : ThankYouTemplate.DEFAULT_CORPS_1;
+            String corps2     = template != null ? template.getCorpsLigne2() : ThankYouTemplate.DEFAULT_CORPS_2;
+            String conclusion = template != null ? template.getConclusion()  : ThankYouTemplate.DEFAULT_CONCLUSION;
+
+            html = emailTemplateService.render(Map.of(
+                    "subject", subject,
+                    "title",   accroche,
+                    "content", "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/>" +
+                               corps1 + " <strong>" + eventTitle + "</strong>.<br/>" +
+                               corps2 + "<br/>" +
+                               conclusion
+            ));
+        }
+
+        sendEmail(toEmail, subject, html, List.of());
     }
 
     @Override

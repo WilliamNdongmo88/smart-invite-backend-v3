@@ -200,7 +200,7 @@ public class EventServiceImpl implements EventService {
         return new ThankYouTemplateResponse(
                 isCustom ? t.getAccroche()    : DEFAULT_ACCROCHE,
                 "Cher(e) *{guestName}*,",     // fixe — le système injecte le vrai nom
-                isCustom ? t.getCorpsLigne1() : DEFAULT_CORPS_1,
+                isCustom ? t.getCorpsLigne1() : DEFAULT_CORPS_1 + " " + event.getType().invitationPrefix(),
                 isCustom ? t.getCorpsLigne2() : DEFAULT_CORPS_2,
                 isCustom ? t.getConclusion()  : DEFAULT_CONCLUSION,
                 isCustom

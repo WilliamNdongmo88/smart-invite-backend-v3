@@ -39,7 +39,8 @@ public class ThankYouJobService {
             return;
         }
 
-        String prefix = event.getType() != null ? event.getType().invitationPrefix() : "à ";
+        String prefix         = event.getType() != null ? event.getType().invitationPrefix() : "à ";
+        String concernedNames = event.getConcernedNames() != null ? event.getConcernedNames() : event.getTitle();
         log.info("[ThankYouJob] Envoi remerciements à {} invités pour l'événement {}", presentGuests.size(), eventId);
 
         for (Guest guest : presentGuests) {
@@ -51,7 +52,7 @@ public class ThankYouJobService {
                 try {
                     emailService.sendThankYouEmail(
                             guest.getEmail(), guest.getFullName(),
-                            event.getTitle(), event.getType(), event.getThankYouTemplate());
+                            event.getTitle(), event.getType(), concernedNames, event.getThankYouTemplate());
                 } catch (Exception e) {
                     log.warn("[ThankYouJob] Échec email pour {} : {}", guest.getFullName(), e.getMessage());
                 }
@@ -60,7 +61,7 @@ public class ThankYouJobService {
                 try {
                     whatsAppService.sendThankYouMessage(
                             guest.getPhoneNumber(), guest.getFullName(),
-                            event.getTitle(), prefix, event.getThankYouTemplate());
+                            event.getTitle(), prefix, concernedNames, event.getType(), event.getThankYouTemplate());
                 } catch (Exception e) {
                     log.warn("[ThankYouJob] Échec WhatsApp pour {} : {}", guest.getFullName(), e.getMessage());
                 }
