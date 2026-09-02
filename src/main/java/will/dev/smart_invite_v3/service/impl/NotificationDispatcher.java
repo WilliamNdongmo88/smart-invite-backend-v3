@@ -51,7 +51,9 @@ public class NotificationDispatcher {
                 emailService.sendConfirmationEmail(email, guestName, eventType, eventTitle, qrBytes, eventPageUrl));
         }
         if (shouldSendWhatsApp(mode) && hasValue(phoneNumber)) {
-            String prefix = fromLink && eventType != null ? eventType.invitationPrefix() : null;
+            // Le prefix est calculé dès que le type est connu, quel que soit le canal d'inscription
+            // (RSVP classique ou via lien public). Le message de confirmation doit toujours être envoyé.
+            String prefix = eventType != null ? eventType.invitationPrefix() : "";
             trySend("WhatsApp confirmation", () ->
                 whatsAppService.sendConfirmationMessage(phoneNumber, guestName, prefix, eventTitle, qrBytes, eventPageUrl));
         }

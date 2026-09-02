@@ -67,7 +67,11 @@ public class WhatsAppServiceImpl implements WhatsAppService {
     public void sendConfirmationMessage(String phoneNumber, String guestName,
                                         String eventTypePrefix, String eventTitle,
                                         byte[] qrBytes, String eventPageUrl) {
-        String message = eventTypePrefix != null ? String.join("\n",
+        // Le message est toujours construit, que le prefix soit renseigné ou non.
+        // La préposition est vide si le type est inconnu (cas défensif).
+        String prefix = (eventTypePrefix != null && !eventTypePrefix.isBlank()) ? eventTypePrefix : "à ";
+
+        String message = String.join("\n",
                 "╔═════════════════════╗",
                 "               ✉️ *SMART INVITE*",
                 "╚═════════════════════╝",
@@ -75,7 +79,7 @@ public class WhatsAppServiceImpl implements WhatsAppService {
                 "🎉 *Confirmation reçue !* 🎉",
                 "",
                 "Merci *" + guestName + "* d'avoir confirmé votre présence "
-                + eventTypePrefix + " *" + eventTitle + "*.",
+                + prefix + " *" + eventTitle + "*.",
                 "",
                 "📄 Votre QR code d'accès est joint ci-dessous.",
                 "",
@@ -85,7 +89,7 @@ public class WhatsAppServiceImpl implements WhatsAppService {
                 "━━━━━━━━━━━━━━━━━━━━━━",
                 "               🌐 smart-invite.com",
                 "━━━━━━━━━━━━━━━━━━━━━━"
-        ) : null;
+        );
 
         sendFiles(phoneNumber, message, qrBytes, null);
     }
