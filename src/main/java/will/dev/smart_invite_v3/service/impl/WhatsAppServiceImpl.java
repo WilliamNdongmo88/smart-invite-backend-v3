@@ -221,27 +221,18 @@ public class WhatsAppServiceImpl implements WhatsAppService {
         } else {
             // ── Message générique ou template custom ────────────────────
             String accroche   = template != null ? template.getAccroche()    : ThankYouTemplate.DEFAULT_ACCROCHE;
-            String corps1     = template != null ? template.getCorpsLigne1() : ThankYouTemplate.DEFAULT_CORPS_1 + " " + eventTypePrefix;
-            String corps2     = template != null ? template.getCorpsLigne2() : ThankYouTemplate.DEFAULT_CORPS_2;
+            String corps1     = template != null ? template.getCorpsLigne1()
+                    : ThankYouTemplate.DEFAULT_CORPS_1 + " *" + eventTitle + "* " + ThankYouTemplate.DEFAULT_CORPS_2;
             String conclusion = template != null ? template.getConclusion()  : ThankYouTemplate.DEFAULT_CONCLUSION;
 
             message = String.join("\n",
-                    "╔═════════════════════╗",
-                    "               ✉️ *SMART INVITE*",
-                    "╚═════════════════════╝",
-                    "",
                     accroche,
                     "",
                     "Cher(e) *" + guestName + "*,",
                     "",
                     corps1,
-                    corps2,
                     "",
-                    conclusion,
-                    "",
-                    "━━━━━━━━━━━━━━━━━━━━━━",
-                    "               🌐 smart-invite.com",
-                    "━━━━━━━━━━━━━━━━━━━━━━"
+                    conclusion
             );
         }
 

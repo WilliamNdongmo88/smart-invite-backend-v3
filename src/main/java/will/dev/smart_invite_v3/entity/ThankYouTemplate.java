@@ -15,7 +15,10 @@ public class ThankYouTemplate {
     public static final String DEFAULT_ACCROCHE   = "🙏 Merci pour votre présence !";
     public static final String DEFAULT_CORPS_1    = "Nous vous remercions chaleureusement d'avoir honoré";
     public static final String DEFAULT_CORPS_2    = "de votre présence.";
-    public static final String DEFAULT_CONCLUSION = "Votre présence a rendu cet événement encore plus mémorable. 💫";
+    public static final String DEFAULT_CONCLUSION =
+            "Votre participation a grandement contribué à la réussite et au rayonnement de cet événement, " +
+            "le rendant encore plus inspirant et mémorable. 💫\n\n" +
+            "Merci pour votre présence et votre confiance !";
 
     // ── Defaults spécifiques MARIAGE ───────────────────────────────────
     // {names} sera remplacé dynamiquement par concernedNames (ex: "Paul et Marie")

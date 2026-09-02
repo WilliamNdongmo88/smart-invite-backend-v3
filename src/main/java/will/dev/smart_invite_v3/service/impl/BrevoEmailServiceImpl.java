@@ -237,17 +237,16 @@ public class BrevoEmailServiceImpl implements EmailService {
         } else {
             // ── Email générique ou template custom ───────────────────────
             String accroche   = template != null ? template.getAccroche()    : ThankYouTemplate.DEFAULT_ACCROCHE;
-            String corps1     = template != null ? template.getCorpsLigne1() : ThankYouTemplate.DEFAULT_CORPS_1;
-            String corps2     = template != null ? template.getCorpsLigne2() : ThankYouTemplate.DEFAULT_CORPS_2;
+            String corps1     = template != null ? template.getCorpsLigne1()
+                    : ThankYouTemplate.DEFAULT_CORPS_1 + " <strong>" + eventTitle + "</strong> " + ThankYouTemplate.DEFAULT_CORPS_2;
             String conclusion = template != null ? template.getConclusion()  : ThankYouTemplate.DEFAULT_CONCLUSION;
 
             html = emailTemplateService.render(Map.of(
                     "subject", subject,
                     "title",   accroche,
-                    "content", "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/>" +
-                               corps1 + " <strong>" + eventTitle + "</strong>.<br/>" +
-                               corps2 + "<br/>" +
-                               conclusion
+                    "content", "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/><br/>" +
+                               corps1 + "<br/><br/>" +
+                               conclusion.replace("\n", "<br/>")
             ));
         }
 
