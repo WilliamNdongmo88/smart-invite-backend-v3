@@ -113,12 +113,12 @@ public class CheckinServiceImpl implements CheckinService {
         Invitation invitation = invitationRepository.findByToken(token).orElse(null);
 
         if (invitation == null) {
-            return new ScanResponse(ScanResult.INVALID, null, null, null, "QR Code invalide");
+            return new ScanResponse(ScanResult.INVALID, null, null, null, "QR Code invalide", null);
         }
 
         Long eventOrganizerId = invitation.getEvent().getOrganizer().getId();
         if (!eventOrganizerId.equals(agent.getOrganizer().getId())) {
-            return new ScanResponse(ScanResult.INVALID, null, null, null, "QR Code invalide pour cet événement");
+            return new ScanResponse(ScanResult.INVALID, null, null, null, "QR Code invalide pour cet événement", null);
         }
 
         String  guestName   = invitation.getGuest().getFullName();
@@ -130,12 +130,12 @@ public class CheckinServiceImpl implements CheckinService {
                 .existsByInvitationIdAndScanStatus(invitation.getId(), ScanResult.VALID);
         if (alreadyCheckedIn) {
             updateCounters(eventId, ScanResult.DUPLICATE);
-            return new ScanResponse(ScanResult.DUPLICATE, guestName, eventTitle, tableNumber, "Invité déjà enregistré");
+            return new ScanResponse(ScanResult.DUPLICATE, guestName, eventTitle, tableNumber, "Invité déjà enregistré", eventId);
         }
 
         if (invitation.getStatus() != InvitationStatus.ACTIVE) {
             updateCounters(eventId, ScanResult.EXPIRED);
-            return new ScanResponse(ScanResult.EXPIRED, guestName, eventTitle, tableNumber, "Invitation expirée ou révoquée");
+            return new ScanResponse(ScanResult.EXPIRED, guestName, eventTitle, tableNumber, "Invitation expirée ou révoquée", eventId);
         }
 
         invitation.getGuest().setRsvpStatus(RsvpStatus.PRESENT);
@@ -155,7 +155,7 @@ public class CheckinServiceImpl implements CheckinService {
         updateCounters(eventId, ScanResult.VALID);
         log.info("[Checkin] Invité {} validé pour l'événement {}", guestName, eventTitle);
 
-        return new ScanResponse(ScanResult.VALID, guestName, eventTitle, tableNumber, "Entrée validée");
+        return new ScanResponse(ScanResult.VALID, guestName, eventTitle, tableNumber, "Entrée validée", eventId);
     }
 
     private void updateCounters(Long eventId, ScanResult result) {
@@ -198,11 +198,17 @@ public class CheckinServiceImpl implements CheckinService {
     }
 
     @Override
-    public CheckinParametersResponse getStats(Long agentUserId) {
+    public CheckinParametersResponse getStats(Long agentUserId, Long eventId) {
         CheckinAgent agent = agentRepository.findByUserId(agentUserId)
                 .orElseThrow(() -> new UserNotFoundException("Agent introuvable"));
+
+        // Si un eventId précis est fourni, retourner uniquement les stats de cet événement
+        if (eventId != null && eventId > 0) {
+            return getParameters(eventId);
+        }
+
+        // Sinon agréger tous les événements de l'organisateur
         Long organizerId = agent.getOrganizer().getId();
-        // Agréger les stats de tous les événements de l'organisateur
         java.util.List<CheckinParameters> all = parametersRepository.findAllByEventOrganizerId(organizerId);
         int total = 0, valid = 0, duplicate = 0, invalid = 0;
         boolean sound = true;
@@ -213,7 +219,16 @@ public class CheckinServiceImpl implements CheckinService {
             invalid   += p.getInvalidScans()   != null ? p.getInvalidScans()   : 0;
             sound = Boolean.TRUE.equals(p.getConfirmationSound());
         }
-        // Retourner un objet synthétique (eventId=0 pour indiquer agrégation)
         return new CheckinParametersResponse(0L, sound, total, valid, duplicate, invalid);
+    }
+
+    @Override
+    public java.util.List<will.dev.smart_invite_v3.dto.checkin.response.EventSummaryResponse> getEventsByAgent(Long agentUserId) {
+        CheckinAgent agent = agentRepository.findByUserId(agentUserId)
+                .orElseThrow(() -> new UserNotFoundException("Agent introuvable"));
+        return eventRepository.findAllByOrganizerIdOrderByCreatedAtDesc(agent.getOrganizer().getId())
+                .stream()
+                .map(will.dev.smart_invite_v3.dto.checkin.response.EventSummaryResponse::from)
+                .toList();
     }
 }

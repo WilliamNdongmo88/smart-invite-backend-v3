@@ -16,5 +16,8 @@ public record ScanResponse(
 
         Integer tableNumber,
 
-        String message
+        String message,
+
+        @Schema(example = "1", description = "ID de l'événement scanné")
+        Long eventId
 ) {}

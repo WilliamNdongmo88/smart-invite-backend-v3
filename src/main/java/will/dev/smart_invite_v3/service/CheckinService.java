@@ -6,6 +6,8 @@ import will.dev.smart_invite_v3.dto.checkin.response.AgentResponse;
 import will.dev.smart_invite_v3.dto.checkin.response.CheckinParametersResponse;
 import will.dev.smart_invite_v3.dto.checkin.response.ScanResponse;
 
+import will.dev.smart_invite_v3.dto.checkin.response.EventSummaryResponse;
+
 import java.util.List;
 
 public interface CheckinService {
@@ -22,5 +24,8 @@ public interface CheckinService {
 
     CheckinParametersResponse updateSound(Long eventId, UpdateSoundRequest request);
 
-    CheckinParametersResponse getStats(Long agentUserId);
+    CheckinParametersResponse getStats(Long agentUserId, Long eventId);
+
+    /** Retourne les événements de l'organisateur auquel appartient l'agent. */
+    List<EventSummaryResponse> getEventsByAgent(Long agentUserId);
 }

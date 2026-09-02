@@ -77,12 +77,13 @@ public class CheckinController {
 
     @GetMapping("/stats")
     @PreAuthorize("hasRole('AGENT')")
-    @Operation(summary = "Stats de scan agrégées pour l'agent connecté")
+    @Operation(summary = "Stats de scan pour l'agent connecté — filtrées par événement si eventId fourni")
     public ResponseEntity<ApiResponse<CheckinParametersResponse>> getStats(
+            @RequestParam(required = false) Long eventId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                checkinService.getStats(userDetails.getUser().getId()), "Stats récupérées"));
+                checkinService.getStats(userDetails.getUser().getId(), eventId), "Stats récupérées"));
     }
 
     @GetMapping("/parameters/{eventId}")
@@ -104,5 +105,15 @@ public class CheckinController {
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 checkinService.updateSound(eventId, request), "Son mis à jour"));
+    }
+
+    @GetMapping("/events")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Événements de l'organisateur accessibles à l'agent")
+    public ResponseEntity<ApiResponse<java.util.List<will.dev.smart_invite_v3.dto.checkin.response.EventSummaryResponse>>> getEvents(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                checkinService.getEventsByAgent(userDetails.getUser().getId()), "Événements récupérés"));
     }
 }
