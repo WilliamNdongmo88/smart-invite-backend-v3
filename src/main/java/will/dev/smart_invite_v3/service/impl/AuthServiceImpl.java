@@ -263,53 +263,81 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public RefreshTokenResponse refresh(RefreshTokenRequest request) {
-
 
         String refreshToken = request.refreshToken();
 
         /*
-         * Extraction email depuis le JWT
+         * 1. Extraction de l'email depuis le JWT
+         *    Si le JWT est expiré, JJWT lève ExpiredJwtException → on rejette proprement
          */
-        String email =
-                jwtService.extractUsername(
-                        refreshToken
-                );
-
-        /*
-         * Recherche utilisateur
-         */
-        User user =
-                userRepository.findByEmail(email)
-
-                        .orElseThrow(
-                                UserNotFoundException::new
-                        );
-
-        /*
-         * Vérification Refresh Token Redis
-         */
-        boolean valid =
-                refreshTokenService.validate(
-                        user.getId(),
-                        refreshToken
-                );
-
-        if (!valid) {
+        String email;
+        try {
+            email = jwtService.extractUsername(refreshToken);
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            log.warn("[Auth] Refresh token JWT expiré pour token: ...{}", refreshToken.length() > 10 ? refreshToken.substring(refreshToken.length() - 10) : "?");
+            throw new InvalidRefreshTokenException();
+        } catch (Exception e) {
+            log.warn("[Auth] Refresh token JWT invalide : {}", e.getMessage());
             throw new InvalidRefreshTokenException();
         }
 
         /*
-         * Génération nouveau Access Token
+         * 2. Recherche utilisateur
          */
-        String accessToken = jwtService.generateAccessToken(user);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(UserNotFoundException::new);
+
+        /*
+         * 3. Vérification Redis
+         *    - Si le token est présent et correspond → ok (validation stricte)
+         *    - Si le token est absent de Redis (TTL expirée, redémarrage Redis…)
+         *      mais que le JWT lui-même est encore valide → rotation silencieuse
+         *      (on re-génère les deux tokens plutôt que de déconnecter l'utilisateur)
+         */
+        String storedToken = refreshTokenService.get(user.getId());
+
+        boolean redisMatch = storedToken != null && storedToken.equals(refreshToken);
+        boolean redisAbsent = storedToken == null;
+
+        if (!redisMatch && !redisAbsent) {
+            // Token présent dans Redis mais ne correspond pas → tentative de réutilisation
+            // d'un ancien token → rejeter pour sécurité
+            log.warn("[Auth] Tentative de refresh avec un token non reconnu pour userId={}", user.getId());
+            throw new InvalidRefreshTokenException();
+        }
+
+        if (redisAbsent) {
+            // Redis a perdu la clé (redémarrage, flush, TTL raccourcie…)
+            // Le JWT est valide → on fait confiance au JWT et on restaure la session
+            log.info("[Auth] Rotation silencieuse pour userId={} (clé Redis absente, JWT valide)", user.getId());
+        }
+
+        /*
+         * 4. Génération du nouveau Access Token
+         *    + Rotation du Refresh Token (best practice sécurité)
+         */
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        String newAccessToken  = jwtService.generateAccessToken(userDetails);
+        String newRefreshToken = jwtService.generateRefreshToken(userDetails);
+
+        /*
+         * 5. Mise à jour Redis avec le nouveau Refresh Token
+         */
+        refreshTokenService.save(user.getId(), newRefreshToken);
+
+        /*
+         * 6. Mise à jour informative en base
+         */
+        user.setRefreshToken(newRefreshToken);
+        userRepository.save(user);
 
         return new RefreshTokenResponse(
-                accessToken,
+                newAccessToken,
+                newRefreshToken,
                 jwtProperties.getAccessTokenExpiration()
         );
-
     }
 
     @Override

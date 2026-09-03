@@ -34,7 +34,16 @@ router.post('/send', async (req, res) => {
         console.log(`[WhatsApp] Message envoyé à ${chatId}`);
         res.json({ success: true, to: chatId });
     } catch (err) {
+        const isDetached = err?.message?.includes('detached Frame')
+            || err?.message?.includes('Target closed')
+            || err?.name === 'ProtocolError';
         console.error(`[WhatsApp] Erreur envoi à ${chatId} :`, err.message);
+        if (isDetached) {
+            return res.status(503).json({
+                error: 'Client WhatsApp en cours de reconnexion, réessayez dans quelques secondes.',
+                detail: err.message,
+            });
+        }
         res.status(500).json({ error: 'Échec envoi WhatsApp', detail: err.message });
     }
 });
@@ -54,13 +63,24 @@ router.post('/send-files', async (req, res) => {
     const normalized = to.replace(/[\s\-\+]/g, '');
     const chatId = `${normalized}@c.us`;
 
+    // ── Snapshot du client courant ─────────────────────────────────────────
+    // On capture la référence UNE SEULE FOIS avant tout await.
+    // Si une reconnexion se produit entre deux sendMessage, on utilise
+    // toujours le même objet et on intercepte proprement l'erreur
+    // "detached Frame" plutôt que de crasher.
+    const c = getClient();
+
+    const safeSend = async (...args) => {
+        if (!isReady()) throw new Error('Client déconnecté pendant l\'envoi');
+        return c.sendMessage(...args);
+    };
+
     try {
-        const c = getClient();
-        if (message)   await c.sendMessage(chatId, message);
+        if (message)   await safeSend(chatId, message);
 
         if (qrBase64) {
             const qrMedia = new MessageMedia('image/png', qrBase64, 'qrcode.png');
-            await c.sendMessage(chatId, qrMedia, {
+            await safeSend(chatId, qrMedia, {
                 caption: '📱 *Votre QR Code d\'accès*\nPrésentez-le à l\'entrée de l\'événement.',
             });
         }
@@ -71,7 +91,7 @@ router.post('/send-files', async (req, res) => {
                 pdfBase64,
                 req.body.pdfFileName || 'invitation.pdf'
             );
-            await c.sendMessage(chatId, pdfMedia, {
+            await safeSend(chatId, pdfMedia, {
                 caption: req.body.pdfCaption || '🎫 *Votre carte d\'invitation*',
             });
         }
@@ -79,7 +99,22 @@ router.post('/send-files', async (req, res) => {
         console.log(`[WhatsApp] Fichiers envoyés à ${chatId}`);
         res.json({ success: true, to: chatId });
     } catch (err) {
-        console.error(`[WhatsApp] Erreur envoi fichiers à ${chatId} :`, err.message);
+        const isDetached = err?.message?.includes('detached Frame')
+            || err?.message?.includes('Target closed')
+            || err?.name === 'ProtocolError';
+
+        console.error(
+            `[WhatsApp] Erreur envoi fichiers à ${chatId} :`,
+            isDetached ? `[Reconnexion] ${err.message}` : err.message
+        );
+
+        if (isDetached) {
+            return res.status(503).json({
+                error: 'Client WhatsApp en cours de reconnexion, réessayez dans quelques secondes.',
+                detail: err.message,
+            });
+        }
+
         res.status(500).json({ error: 'Échec envoi fichiers WhatsApp', detail: err.message });
     }
 });
