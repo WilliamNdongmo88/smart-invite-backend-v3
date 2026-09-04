@@ -51,4 +51,13 @@ public interface EmailService {
      */
     void sendContactNotification(String adminEmail, String senderName,
                                  String senderEmail, String message);
+
+    /**
+     * Envoie la réponse de l'admin à l'utilisateur qui a écrit via le formulaire Email.
+     *
+     * @param toEmail       email de l'utilisateur
+     * @param senderName    nom de l'utilisateur
+     * @param replyMessage  corps de la réponse
+     */
+    void sendAdminReply(String toEmail, String senderName, String replyMessage);
 }
