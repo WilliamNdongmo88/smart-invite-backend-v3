@@ -25,4 +25,15 @@ public interface WhatsAppService {
 
     void sendReminderMessage(String phoneNumber, String guestName, String eventTitle,
                              String token, String eventTypePrefix);
+
+    /**
+     * Notifie l'admin qu'un visiteur vient de soumettre un message via le formulaire de contact.
+     *
+     * @param adminPhone   numéro WhatsApp de l'admin
+     * @param senderName   nom de l'expéditeur
+     * @param senderPhone  numéro WhatsApp de l'expéditeur (pour rappel)
+     * @param message      corps du message
+     */
+    void sendContactMessageToAdmin(String adminPhone, String senderName,
+                                   String senderPhone, String message);
 }

@@ -78,6 +78,9 @@ public class SecurityConfig {
                         // Vue publique d'un événement (mode preview invité — sans auth)
                         .requestMatchers(HttpMethod.GET,  "/api/events/*/public").permitAll()
 
+                        // Formulaire de contact public (visiteur anonyme ou connecté)
+                        .requestMatchers(HttpMethod.POST, "/api/contact").permitAll()
+
                         // Admin
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 

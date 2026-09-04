@@ -272,6 +272,24 @@ public class BrevoEmailServiceImpl implements EmailService {
         sendEmail(toEmail, "Rapport de présence — " + eventTitle, html, attachments);
     }
 
+    @Override
+    public void sendContactNotification(String adminEmail, String senderName,
+                                        String senderEmail, String message) {
+        String html = emailTemplateService.render(Map.of(
+                "subject", "Nouveau message de contact — Smart Invite",
+                "title",   "📩 Nouveau message de contact",
+                "content", "Bonjour,<br/><br/>" +
+                           "Un visiteur vient de vous envoyer un message depuis le formulaire de contact :<br/><br/>" +
+                           "<strong>Nom :</strong> <span style=\"color:#c9a84c;\">" + senderName + "</span><br/>" +
+                           "<strong>Email de réponse :</strong> <a href=\"mailto:" + senderEmail + "\">" + senderEmail + "</a><br/><br/>" +
+                           "<strong>Message :</strong><br/>" +
+                           "<blockquote style=\"border-left:3px solid #c9a84c;padding-left:12px;color:#555;\">" +
+                           message.replace("\n", "<br/>") +
+                           "</blockquote>"
+        ));
+        sendEmail(adminEmail, "Nouveau message de contact — Smart Invite", html, List.of());
+    }
+
     private void sendEmail(String to, String subject, String htmlContent,
                            List<SendSmtpEmailAttachment> attachments) {
         try {

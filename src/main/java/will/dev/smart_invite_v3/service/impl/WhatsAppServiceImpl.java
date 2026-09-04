@@ -240,6 +240,28 @@ public class WhatsAppServiceImpl implements WhatsAppService {
     }
 
     @Override
+    public void sendContactMessageToAdmin(String adminPhone, String senderName,
+                                          String senderPhone, String message) {
+        String body = String.join("\n",
+            "╔═════════════════════╗",
+            "      ✉️ *SMART INVITE*",
+            "╚═════════════════════╝",
+            "",
+            "📩 *Nouveau message de contact !*",
+            "",
+            "👤 Nom     : *" + senderName + "*",
+            "📱 WhatsApp: *" + senderPhone + "*",
+            "",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "💬 *Message :*",
+            message,
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "🌐 smart-invite.com"
+        );
+        send(adminPhone, body);
+    }
+
+    @Override
     public void sendPdfReport(String phoneNumber, String caption, byte[] pdfBytes) {
         try {
             HttpHeaders headers = new HttpHeaders();

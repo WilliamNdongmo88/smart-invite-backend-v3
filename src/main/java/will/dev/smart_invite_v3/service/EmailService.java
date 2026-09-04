@@ -40,4 +40,15 @@ public interface EmailService {
                            EventType eventType, String concernedNames, ThankYouTemplate template);
 
     void sendAttendanceReport(String toEmail, String organizerName, String eventTitle, byte[] pdfBytes);
+
+    /**
+     * Notifie l'admin par email qu'un visiteur a soumis un message de contact.
+     *
+     * @param adminEmail    email admin destinataire
+     * @param senderName    nom de l'expéditeur
+     * @param senderEmail   email de l'expéditeur (canal de réponse)
+     * @param message       corps du message
+     */
+    void sendContactNotification(String adminEmail, String senderName,
+                                 String senderEmail, String message);
 }
