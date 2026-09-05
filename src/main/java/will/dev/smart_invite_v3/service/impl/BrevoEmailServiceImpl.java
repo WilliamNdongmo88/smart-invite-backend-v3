@@ -275,7 +275,7 @@ public class BrevoEmailServiceImpl implements EmailService {
     @Override
     public void sendAdminReply(String toEmail, String senderName, String replyMessage) {
         String html = emailTemplateService.render(Map.of(
-                "subject", "Réponse à votre message — Smart Invite",
+                "subject", "Réponse à votre message — smart-invite",
                 "title",   "✉️ Réponse à votre message",
                 "content", "Bonjour <strong style=\"color:#c9a84c;\">" + senderName + "</strong>,<br/><br/>" +
                            "L'équipe Smart Invite vous a répondu :<br/><br/>" +
