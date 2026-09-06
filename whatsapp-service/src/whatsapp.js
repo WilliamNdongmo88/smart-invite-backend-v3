@@ -31,17 +31,17 @@ const pendingRsvp = new Map();
 
 // ── Factory : crée et initialise un client ────────────────────────────────────
 function createClient() {
+    const isHeadless = process.env.HEADLESS !== 'false'; // headless par défaut, sauf si HEADLESS=false explicitement
+
     const c = new Client({
         authStrategy: new LocalAuth({ clientId: 'main' }),
         webVersionCache: { type: 'local' },
         puppeteer: {
-            headless: process.env.NODE_ENV === 'production' ? 'new' : false,
+            headless: isHeadless,
             executablePath: process.env.CHROME_PATH
                 || (process.platform === 'win32'
                     ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-                    : process.env.NODE_ENV === 'production'
-                        ? '/usr/bin/chromium'
-                        : undefined),
+                    : '/usr/bin/chromium'),
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',

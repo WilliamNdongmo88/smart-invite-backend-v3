@@ -30,6 +30,9 @@ public class WhatsAppProcessConfig {
     @Value("${app.whatsapp.service-dir:../whatsapp-service}")
     private String serviceDir;
 
+    @Value("${app.whatsapp.headless:true}")
+    private boolean headless;
+
     private Process whatsappProcess;
 
     @PostConstruct
@@ -64,7 +67,10 @@ public class WhatsAppProcessConfig {
             // Redirige stdout/stderr du processus Node vers la console Spring Boot
             pb.inheritIO();
             pb.environment().put("PORT", "3001");
-            pb.environment().put("NODE_ENV", "development");
+            pb.environment().put("NODE_ENV", "production");
+            // Forcer Chromium système et mode headless (pas de display en prod)
+            pb.environment().put("CHROME_PATH", "/usr/bin/chromium");
+            pb.environment().put("HEADLESS", String.valueOf(headless));
 
             whatsappProcess = pb.start();
             log.info("[WhatsApp] Service démarré (PID: {}) depuis : {}", whatsappProcess.pid(), servicePath);
