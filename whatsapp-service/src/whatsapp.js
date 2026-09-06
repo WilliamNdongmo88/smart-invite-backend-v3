@@ -35,7 +35,7 @@ function createClient() {
         authStrategy: new LocalAuth({ clientId: 'main' }),
         webVersionCache: { type: 'local' },
         puppeteer: {
-            headless: false,
+            headless: process.env.NODE_ENV === 'production' ? 'new' : false,
             executablePath: process.env.CHROME_PATH
                 || (process.platform === 'win32'
                     ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
