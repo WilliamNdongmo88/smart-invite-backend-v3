@@ -75,6 +75,10 @@ ENV CHROME_PATH=/usr/bin/chromium
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV NODE_ENV=production
 
+# Dossier de session WhatsApp (monter un volume Railway sur ce chemin)
+# Volume Railway : /app/whatsapp-service/.wwebjs_auth
+ENV WHATSAPP_AUTH_DIR=/app/whatsapp-service/.wwebjs_auth
+
 WORKDIR /app
 
 EXPOSE 8010

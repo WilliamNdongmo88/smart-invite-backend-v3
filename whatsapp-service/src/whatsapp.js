@@ -1,5 +1,6 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+const QRCode  = require('qrcode');
 const axios  = require('axios');
 
 // ── Capture globale pour éviter le crash du process ──────────────────────────
@@ -25,6 +26,8 @@ process.on('unhandledRejection', (reason) => {
 let isReady       = false;
 let client        = null;
 let reconnectTimer = null;
+let lastQrBase64  = null;   // QR code en base64 PNG, scannable via /qr
+let lastQrRaw     = null;   // QR code brut pour re-génération
 
 // Map : numéro normalisé → { token, guestName, eventTitle, eventType }
 const pendingRsvp = new Map();
@@ -65,11 +68,20 @@ function createClient() {
     });
 
     c.on('qr', (qr) => {
+        lastQrRaw = qr;
         console.log('[WhatsApp] Scannez ce QR code avec votre téléphone :');
         qrcode.generate(qr, { small: true });
+        // Génère aussi le QR en base64 PNG pour l'endpoint /qr
+        QRCode.toDataURL(qr, { errorCorrectionLevel: 'H', width: 400 })
+            .then((url) => { lastQrBase64 = url; })
+            .catch((err) => console.warn('[WhatsApp] Erreur génération QR base64 :', err.message));
     });
 
-    c.on('authenticated', () => console.log('[WhatsApp] Authentifié ✅'));
+    c.on('authenticated', () => {
+        lastQrBase64 = null;
+        lastQrRaw    = null;
+        console.log('[WhatsApp] Authentifié ✅');
+    });
 
     c.on('ready', () => {
         isReady = true;
@@ -251,4 +263,12 @@ module.exports = {
     registerRsvp,
     // Expose le getter pour que les routes accèdent toujours au client courant
     getClient: () => client,
+    // QR code base64 PNG (null si déjà connecté)
+    getQrBase64: () => lastQrBase64,
+    // Statut global du service
+    getStatus: () => ({
+        ready: isReady,
+        hasQr: lastQrBase64 !== null,
+        state: isReady ? 'CONNECTED' : (lastQrBase64 ? 'WAITING_QR_SCAN' : 'INITIALIZING'),
+    }),
 };
