@@ -43,6 +43,3 @@ whatsapp-service/src/.env
 .wwebjs_auth/
 .wwebjs_cache/
 node_modules/
-.idea/
-.env
-*.env
