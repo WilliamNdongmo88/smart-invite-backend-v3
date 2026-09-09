@@ -31,17 +31,27 @@ const pendingRsvp = new Map();
 
 // ── Factory : crée et initialise un client ────────────────────────────────────
 function createClient() {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const headless = process.env.PUPPETEER_HEADLESS
+        ? process.env.PUPPETEER_HEADLESS === 'true'
+        : isProduction;
+
     const c = new Client({
         authStrategy: new LocalAuth({ clientId: 'main' }),
-        webVersionCache: { type: 'local' },
+
+        webVersionCache: {
+            type: 'local',
+        },
+
         puppeteer: {
-            headless: false,
-            executablePath: process.env.CHROME_PATH
-                || (process.platform === 'win32'
+            headless,
+
+            executablePath:
+                process.env.CHROME_PATH ||
+                (process.platform === 'win32'
                     ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-                    : process.env.NODE_ENV === 'production'
-                        ? '/usr/bin/chromium'
-                        : undefined),
+                    : '/usr/bin/chromium'),
+
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -60,9 +70,11 @@ function createClient() {
                 '--use-mock-keychain',
                 '--remote-debugging-port=0',
             ],
+
             timeout: 60000,
         },
     });
+
 
     c.on('qr', (qr) => {
         console.log('NODE_ENV: ', process.env.NODE_ENV);
