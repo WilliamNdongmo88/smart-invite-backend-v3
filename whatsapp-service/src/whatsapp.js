@@ -57,21 +57,37 @@ function createClient() {
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
+                '--disable-software-rasterizer',
                 '--disable-extensions',
                 '--disable-background-networking',
+                '--disable-background-timer-throttling',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-breakpad',
+                '--disable-client-side-phishing-detection',
+                '--disable-component-extensions-with-background-pages',
                 '--disable-default-apps',
+                '--disable-features=TranslateUI,BlinkGenPropertyTrees,IsolateOrigins,site-per-process',
+                '--disable-hang-monitor',
+                '--disable-ipc-flooding-protection',
+                '--disable-popup-blocking',
+                '--disable-prompt-on-repost',
+                '--disable-renderer-backgrounding',
                 '--disable-sync',
                 '--disable-translate',
+                '--disable-web-security',
+                '--force-color-profile=srgb',
                 '--metrics-recording-only',
-                '--safebrowsing-disable-auto-update',
                 '--no-first-run',
                 '--no-default-browser-check',
                 '--password-store=basic',
                 '--use-mock-keychain',
+                '--safebrowsing-disable-auto-update',
                 '--remote-debugging-port=0',
+                '--no-zygote',               // évite le crash du processus zygote en container
+                '--single-process',          // réduit la mémoire en container
             ],
 
-            timeout: 60000,
+            timeout: 120000,               // 2 min au lieu de 1 min (Railway est plus lent)
         },
     });
 
@@ -95,16 +111,16 @@ function createClient() {
     c.on('auth_failure', (msg) => {
         isReady = false;
         console.error('[WhatsApp] Échec authentification ❌ :', msg);
-        scheduleReconnect();
+        scheduleReconnect(30_000);
     });
 
     // ── Déconnexion → reconnexion automatique ──
     c.on('disconnected', (reason) => {
         isReady = false;
-        console.warn('[WhatsApp] Déconnecté :', reason, '— reconnexion dans 10 s…');
+        console.warn('[WhatsApp] Déconnecté :', reason, '— reconnexion dans 30 s…');
         // Destruction propre avant de recréer
         try { c.destroy().catch(() => {}); } catch (_) {}
-        scheduleReconnect();
+        scheduleReconnect(30_000);
     });
 
     // ── Réception des messages OUI / NON ──

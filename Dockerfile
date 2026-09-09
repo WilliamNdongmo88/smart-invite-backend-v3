@@ -79,6 +79,11 @@ ENV NODE_ENV=production
 # Volume Railway : /app/whatsapp-service/.wwebjs_auth
 ENV WHATSAPP_AUTH_DIR=/app/whatsapp-service/.wwebjs_auth
 
+# Workaround : Railway limite /dev/shm à 64 MB par défaut.
+# On monte /dev/shm sur /tmp pour donner plus de mémoire partagée à Chromium.
+# Voir : https://github.com/puppeteer/puppeteer/issues/1132
+RUN mkdir -p /tmp/.chromium-shm
+
 WORKDIR /app
 
 EXPOSE 8010
