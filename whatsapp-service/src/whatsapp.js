@@ -29,8 +29,6 @@ let reconnectTimer = null;
 // Map : numéro normalisé → { token, guestName, eventTitle, eventType }
 const pendingRsvp = new Map();
 
-console.log("NODE_ENV: ", process.env.NODE_ENV);
-
 // ── Factory : crée et initialise un client ────────────────────────────────────
 function createClient() {
     const c = new Client({
@@ -238,6 +236,8 @@ function scheduleReconnect(delayMs = 10_000) {
 
 // ── Démarrage initial ─────────────────────────────────────────────────────────
 console.log('🚀 Initialisation WhatsApp');
+console.log("NODE_ENV: ", process.env.NODE_ENV);
+console.log("NODE_BACKEND_URL: ", process.env.BACKEND_URL);
 client = createClient();
 client.initialize().catch((err) => {
     console.error('[WhatsApp] Erreur initialize() initiale :', err.message);
