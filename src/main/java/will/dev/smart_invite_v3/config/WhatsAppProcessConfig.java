@@ -30,6 +30,9 @@ public class WhatsAppProcessConfig {
     @Value("${app.whatsapp.service-dir:../whatsapp-service}")
     private String serviceDir;
 
+    @Value("${app.whatsapp.environnement}")
+    private String environnement;
+
     private Process whatsappProcess;
 
     @PostConstruct
@@ -64,7 +67,7 @@ public class WhatsAppProcessConfig {
             // Redirige stdout/stderr du processus Node vers la console Spring Boot
             pb.inheritIO();
             pb.environment().put("PORT", "3001");
-            pb.environment().put("NODE_ENV", "development");
+            pb.environment().put("NODE_ENV", environnement);
 
             whatsappProcess = pb.start();
             log.info("[WhatsApp] Service démarré (PID: {}) depuis : {}", whatsappProcess.pid(), servicePath);
