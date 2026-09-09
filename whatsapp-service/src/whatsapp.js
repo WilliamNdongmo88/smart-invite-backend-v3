@@ -65,6 +65,8 @@ function createClient() {
     });
 
     c.on('qr', (qr) => {
+        console.log('NODE_ENV: ', process.env.NODE_ENV);
+        console.log('NODE BACKEND_URL: ', process.env.BACKEND_URL);
         console.log('[WhatsApp] Scannez ce QR code avec votre téléphone :');
         qrcode.generate(qr, { small: true });
     });
