@@ -33,6 +33,12 @@ public class WhatsAppProcessConfig {
     @Value("${app.whatsapp.environnement}")
     private String environnement;
 
+    @Value("${app.whatsapp.api-secret:smart-invite-whatsapp-secret}")
+    private String apiSecret;
+
+    @Value("${app.base.url:http://localhost:8010}")
+    private String backendUrl;
+
     private Process whatsappProcess;
 
     @PostConstruct
@@ -68,6 +74,8 @@ public class WhatsAppProcessConfig {
             pb.inheritIO();
             pb.environment().put("PORT", "3001");
             pb.environment().put("NODE_ENV", environnement);
+            pb.environment().put("API_SECRET", apiSecret);
+            pb.environment().put("BACKEND_URL", backendUrl);
 
             whatsappProcess = pb.start();
             log.info("[WhatsApp] Service démarré (PID: {}) depuis : {}", whatsappProcess.pid(), servicePath);
