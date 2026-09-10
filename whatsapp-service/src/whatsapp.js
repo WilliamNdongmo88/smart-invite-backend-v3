@@ -74,7 +74,6 @@ function createClient() {
                 '--disable-renderer-backgrounding',
                 '--disable-sync',
                 '--disable-translate',
-                '--disable-web-security',
                 '--force-color-profile=srgb',
                 '--metrics-recording-only',
                 '--no-first-run',
@@ -83,11 +82,10 @@ function createClient() {
                 '--use-mock-keychain',
                 '--safebrowsing-disable-auto-update',
                 '--remote-debugging-port=0',
-                '--no-zygote',               // évite le crash du processus zygote en container
-                '--single-process',          // réduit la mémoire en container
+                '--no-zygote',
             ],
 
-            timeout: 120000,               // 2 min au lieu de 1 min (Railway est plus lent)
+            timeout: 120000,
         },
     });
 
