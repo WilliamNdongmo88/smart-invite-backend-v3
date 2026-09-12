@@ -92,9 +92,15 @@ public class FirebaseStorageServiceImpl implements FirebaseStorageService {
 
     @Override
     public String getSignedUrl(String path, long durationMs) {
+        log.info("[SIGNED-URL] Tentative de génération d'URL signée — bucket : '{}', path : '{}', durée : {} ms ({} jours)",
+                storageBucket, path, durationMs, durationMs / (1000 * 60 * 60 * 24));
         try {
             Storage storage = StorageClient.getInstance().bucket().getStorage();
+            log.debug("[SIGNED-URL] Storage client obtenu — bucket : {}", storageBucket);
+
             BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(storageBucket, path)).build();
+            log.debug("[SIGNED-URL] BlobInfo construit pour : {}/{}", storageBucket, path);
+
             String url = storage.signUrl(
                     blobInfo,
                     durationMs,
@@ -102,10 +108,12 @@ public class FirebaseStorageServiceImpl implements FirebaseStorageService {
                     Storage.SignUrlOption.httpMethod(HttpMethod.GET),
                     Storage.SignUrlOption.withV4Signature()
             ).toString();
-            log.info("URL signée générée pour : {}", path);
+
+            log.info("[SIGNED-URL] ✅ URL signée générée avec succès pour : '{}' — longueur : {} caractères", path, url.length());
             return url;
+
         } catch (Exception e) {
-            log.error("Erreur lors de la génération de l'URL signée pour {} : {}", path, e.getMessage());
+            log.error("[SIGNED-URL] ❌ Échec de génération de l'URL signée pour '{}' — cause : {}", path, e.getMessage(), e);
             return null;
         }
     }

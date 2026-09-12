@@ -36,17 +36,19 @@ public class EmailTemplateService {
      */
     private String resolveLogo() {
         String path = activeProfile + "/logos/logo_dark.png";
+        log.info("[LOGO] Résolution du logo — profil actif : '{}', chemin Firebase : '{}'", activeProfile, path);
         try {
             String url = firebaseStorage.getSignedUrl(path, LOGO_URL_DURATION_MS);
             if (url != null && !url.isBlank()) {
-                log.info("URL signée du logo générée : {}", path);
+                log.info("[LOGO] ✅ URL signée récupérée avec succès pour : '{}' — longueur URL : {} caractères", path, url.length());
+                log.debug("[LOGO] URL complète : {}", url);
                 return url;
             } else {
-                log.warn("URL signée vide pour le logo : {}", path);
+                log.warn("[LOGO] ❌ URL signée vide ou null pour : '{}' — le logo ne s'affichera pas dans le mail", path);
                 return "";
             }
         } catch (Exception e) {
-            log.error("Erreur lors de la résolution du logo [{}] : {}", path, e.getMessage());
+            log.error("[LOGO] ❌ Exception lors de la récupération de l'URL signée pour '{}' — cause : {}", path, e.getMessage(), e);
             return "";
         }
     }
