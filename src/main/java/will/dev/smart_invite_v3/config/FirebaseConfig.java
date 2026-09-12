@@ -34,6 +34,9 @@ public class FirebaseConfig {
     @Value("${app.firebase.private-key}")
     private String privateKeyRaw;
 
+    @Value("${app.firebase.private-key-id}")
+    private String privateKeyId;
+
     @PostConstruct
     public void init() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
         if (!FirebaseApp.getApps().isEmpty()) return;
@@ -53,7 +56,7 @@ public class FirebaseConfig {
                 .setClientEmail(clientEmail)
                 .setClientId(clientId)
                 .setPrivateKey(privateKey)
-                .setPrivateKeyId(null)
+                .setPrivateKeyId(privateKeyId)
                 .setScopes(Collections.singletonList("https://www.googleapis.com/auth/cloud-platform"))
                 .build();
 
