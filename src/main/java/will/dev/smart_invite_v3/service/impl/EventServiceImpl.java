@@ -82,7 +82,7 @@ public class EventServiceImpl implements EventService {
 
         Event saved = eventRepository.save(event);
         if (saved.getEventDate() != null) {
-            eventScheduleService.schedule(saved.getId(), saved.getEventDate());
+            eventScheduleService.schedule(saved.getId(), saved.getEventDate(), extractNumberOfDays(saved));
         }
         return EventResponse.from(saved);
     }
@@ -129,7 +129,7 @@ public class EventServiceImpl implements EventService {
         Event saved = eventRepository.save(event);
 
         if (saved.getEventDate() != null) {
-            eventScheduleService.schedule(saved.getId(), saved.getEventDate());
+            eventScheduleService.schedule(saved.getId(), saved.getEventDate(), extractNumberOfDays(saved));
         }
 
         return EventResponse.from(saved);
@@ -145,6 +145,25 @@ public class EventServiceImpl implements EventService {
         } else if (request instanceof CeremonieEventPayloadRequest ce) {
             event.setCeremonieDetailsContent(ce.toContentData());
         }
+    }
+
+    /**
+     * Extrait le nombre de jours du programme depuis le contenu JSON de l'événement.
+     *
+     * Pour un mariage avec 2 jours dans program.days  → retourne 2
+     * Pour les autres types d'événements              → retourne 1 (valeur par défaut)
+     * Si le contenu est absent ou le programme vide   → retourne 1
+     */
+    private int extractNumberOfDays(Event event) {
+        if (event.getWeddingDetailsContent() != null) {
+            var program = event.getWeddingDetailsContent().getProgram();
+            if (program != null && program.getDays() != null && !program.getDays().isEmpty()) {
+                return program.getDays().size();
+            }
+        }
+        // Pour les autres types (conférence, gala, cérémonie), on garde 1 jour par défaut
+        // On pourra étendre ici si ces types gagnent aussi un programme multi-jours
+        return 1;
     }
 
     @Override

@@ -26,32 +26,36 @@ public class EventScheduleService {
 
     /**
      * Crée ou met à jour l'entrée event_schedules pour un événement.
-     * scheduled_for = eventDate + 1 jour.
+     * scheduled_for = eventDate + numberOfDays.
+     *
+     * @param eventId      identifiant de l'événement
+     * @param eventDate    date de début de l'événement
+     * @param numberOfDays durée de l'événement en jours (ex : 2 pour un mariage sur 2 jours)
      */
     @Transactional
-    public void schedule(Long eventId, LocalDateTime eventDate) {
+    public void schedule(Long eventId, LocalDateTime eventDate, int numberOfDays) {
         try {
             if (eventDate == null) {
                 log.warn("[EventSchedule] eventDate null pour l'événement {} — schedule ignoré", eventId);
                 return;
             }
 
-        // TEMPORAIRE — pour test
-        //LocalDateTime scheduledFor = LocalDateTime.now().plusMinutes(2);
-        LocalDateTime scheduledFor = eventDate.plusDays(1);
+            // Le job post-événement se déclenche après le dernier jour
+            LocalDateTime scheduledFor = eventDate.plusDays(numberOfDays);
 
             Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventNotFoundException(eventId));
 
-        EventSchedule schedule = eventScheduleRepository.findByEventId(eventId)
-                .orElseGet(() -> EventSchedule.builder().event(event).build());
+            EventSchedule schedule = eventScheduleRepository.findByEventId(eventId)
+                    .orElseGet(() -> EventSchedule.builder().event(event).build());
 
-        schedule.setScheduledFor(scheduledFor);
-        schedule.setExecuted(false);
-        schedule.setIsCheckinExecuted(false);
+            schedule.setScheduledFor(scheduledFor);
+            schedule.setExecuted(false);
+            schedule.setIsCheckinExecuted(false);
 
-        eventScheduleRepository.save(schedule);
-        log.info("[EventSchedule] Job planifié pour l'événement {} à {}", eventId, scheduledFor);
+            eventScheduleRepository.save(schedule);
+            log.info("[EventSchedule] Job planifié pour l'événement {} à {} (durée : {} jour(s))",
+                    eventId, scheduledFor, numberOfDays);
         } catch (Exception e) {
             log.error("[EventSchedule] ERREUR schedule() pour l'événement {} : {}", eventId, e.getMessage(), e);
         }
