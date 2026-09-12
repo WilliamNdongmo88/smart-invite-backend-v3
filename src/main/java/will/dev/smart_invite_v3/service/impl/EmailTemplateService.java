@@ -1,6 +1,5 @@
 package will.dev.smart_invite_v3.service.impl;
 
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,7 +8,6 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import will.dev.smart_invite_v3.service.FirebaseStorageService;
 
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,26 +22,38 @@ public class EmailTemplateService {
     @Value("${spring.profiles.active:dev}")
     private String activeProfile;
 
-    private String logoDataUri;
+    // Limite V4 : 7 jours maximum
+    private static final long LOGO_URL_DURATION_MS = 7L * 24 * 60 * 60 * 1000;
 
-    @PostConstruct
-    void loadLogo() {
+    /**
+     * Génère une URL signée Firebase valide 7 jours pour le logo.
+     * Chemin selon le profil actif :
+     *   dev  → dev/logos/logo_dark.png
+     *   prod → prod/logos/logo_dark.png
+     *
+     * Une nouvelle URL est générée à chaque envoi de mail pour éviter
+     * toute expiration (limite V4 = 7 jours max).
+     */
+    private String resolveLogo() {
+        String path = activeProfile + "/logos/logo_dark.png";
         try {
-            byte[] bytes = firebaseStorage.downloadBytes(activeProfile + "/logos/logo.png");
-            if (bytes != null) {
-                logoDataUri = "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes);
-                log.info("Logo email chargé depuis Firebase ({} bytes)", bytes.length);
+            String url = firebaseStorage.getSignedUrl(path, LOGO_URL_DURATION_MS);
+            if (url != null && !url.isBlank()) {
+                log.info("URL signée du logo générée : {}", path);
+                return url;
             } else {
-                log.warn("Logo email introuvable sur Firebase : {}/logos/logo.png", activeProfile);
+                log.warn("URL signée vide pour le logo : {}", path);
+                return "";
             }
         } catch (Exception e) {
-            log.warn("Impossible de charger le logo email depuis Firebase : {}", e.getMessage());
+            log.error("Erreur lors de la résolution du logo [{}] : {}", path, e.getMessage());
+            return "";
         }
     }
 
     public String render(Map<String, Object> variables) {
         Map<String, Object> vars = new HashMap<>(variables);
-        vars.put("logoUrl", logoDataUri != null ? logoDataUri : "");
+        vars.put("logoUrl", resolveLogo());
         Context context = new Context();
         context.setVariables(vars);
         return templateEngine.process("email/base-email", context);

@@ -5,6 +5,7 @@ import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.HttpMethod;
 import com.google.firebase.cloud.StorageClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import will.dev.smart_invite_v3.service.FirebaseStorageService;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import java.util.UUID;
 
 @Slf4j
@@ -85,6 +87,26 @@ public class FirebaseStorageServiceImpl implements FirebaseStorageService {
             log.info("Fichier supprimé de Firebase : {}", path);
         } catch (Exception e) {
             log.warn("Erreur suppression Firebase {} : {}", path, e.getMessage());
+        }
+    }
+
+    @Override
+    public String getSignedUrl(String path, long durationMs) {
+        try {
+            Storage storage = StorageClient.getInstance().bucket().getStorage();
+            BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(storageBucket, path)).build();
+            String url = storage.signUrl(
+                    blobInfo,
+                    durationMs,
+                    TimeUnit.MILLISECONDS,
+                    Storage.SignUrlOption.httpMethod(HttpMethod.GET),
+                    Storage.SignUrlOption.withV4Signature()
+            ).toString();
+            log.info("URL signée générée pour : {}", path);
+            return url;
+        } catch (Exception e) {
+            log.error("Erreur lors de la génération de l'URL signée pour {} : {}", path, e.getMessage());
+            return null;
         }
     }
 

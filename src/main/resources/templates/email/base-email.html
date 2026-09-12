@@ -22,10 +22,17 @@
                                padding:36px 40px 28px;
                                border-bottom:2px solid #c9a84c;">
 
-                        <img th:src="${logoUrl}"
+                        <img th:if="${logoUrl != null and !logoUrl.isEmpty()}"
+                             th:src="${logoUrl}"
                              alt="Smart Invite"
                              width="140"
                              style="display:block;margin:0 auto 16px;"/>
+                        <p th:if="${logoUrl == null or logoUrl.isEmpty()}"
+                           style="color:#c9a84c;font-size:20px;font-weight:bold;
+                                  letter-spacing:4px;text-align:center;
+                                  margin:0 auto 16px;text-transform:uppercase;">
+                            Smart Invite
+                        </p>
 
                         <div style="width:60px;height:1px;background:#c9a84c;margin:0 auto;"></div>
                     </td>
