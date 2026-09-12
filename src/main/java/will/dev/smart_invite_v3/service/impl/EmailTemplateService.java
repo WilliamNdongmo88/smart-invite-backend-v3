@@ -6,9 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
-import will.dev.smart_invite_v3.service.FirebaseStorageService;
 
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,16 +15,19 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class EmailTemplateService {
 
-    private final TemplateEngine templateEngine;
-    private final FirebaseStorageService firebaseStorage;
-
     @Value("${spring.profiles.active:dev}")
     private String activeProfile;
 
+    @Value("${app.firebase.storage-bucket}")
+    private String storageBucket;
+
+    private final TemplateEngine templateEngine;
+
     /**
-     * Télécharge le logo depuis Firebase et le convertit en Data URI base64.
-     * Le logo est embarqué directement dans le HTML — aucune requête externe,
-     * aucun risque de blocage par les clients mail (Gmail, Outlook, etc.).
+     * Retourne l'URL publique permanente du logo hébergé sur Firebase Storage.
+     *
+     * Le fichier doit être rendu public dans Firebase Storage (règles de lecture publique).
+     * URL format : https://storage.googleapis.com/{bucket}/{profile}/logos/logo_dark.png
      *
      * Chemin Firebase selon le profil actif :
      *   dev  → dev/logos/logo_dark.png
@@ -34,21 +35,9 @@ public class EmailTemplateService {
      */
     private String resolveLogo() {
         String path = activeProfile + "/logos/logo_dark.png";
-        log.info("[LOGO] Résolution du logo — profil actif : '{}', chemin Firebase : '{}'", activeProfile, path);
-        try {
-            byte[] bytes = firebaseStorage.downloadBytes(path);
-            if (bytes != null && bytes.length > 0) {
-                String dataUri = "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes);
-                log.info("[LOGO] ✅ Logo téléchargé et encodé en base64 depuis Firebase : '{}' ({} bytes)", path, bytes.length);
-                return dataUri;
-            } else {
-                log.warn("[LOGO] ❌ Logo introuvable ou vide sur Firebase : '{}' — le logo ne s'affichera pas", path);
-                return "";
-            }
-        } catch (Exception e) {
-            log.error("[LOGO] ❌ Erreur lors du téléchargement du logo '{}' : {}", path, e.getMessage(), e);
-            return "";
-        }
+        String url = "https://storage.googleapis.com/" + storageBucket + "/" + path;
+        log.info("[LOGO] URL publique du logo : {}", url);
+        return url;
     }
 
     public String render(Map<String, Object> variables) {
