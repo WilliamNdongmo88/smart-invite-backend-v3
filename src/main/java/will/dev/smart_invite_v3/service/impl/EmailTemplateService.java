@@ -8,6 +8,7 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import will.dev.smart_invite_v3.service.FirebaseStorageService;
 
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,33 +23,30 @@ public class EmailTemplateService {
     @Value("${spring.profiles.active:dev}")
     private String activeProfile;
 
-    // Limite V4 : 7 jours maximum
-    private static final long LOGO_URL_DURATION_MS = 7L * 24 * 60 * 60 * 1000;
-
     /**
-     * Génère une URL signée Firebase valide 7 jours pour le logo.
-     * Chemin selon le profil actif :
+     * Télécharge le logo depuis Firebase et le convertit en Data URI base64.
+     * Le logo est embarqué directement dans le HTML — aucune requête externe,
+     * aucun risque de blocage par les clients mail (Gmail, Outlook, etc.).
+     *
+     * Chemin Firebase selon le profil actif :
      *   dev  → dev/logos/logo_dark.png
      *   prod → prod/logos/logo_dark.png
-     *
-     * Une nouvelle URL est générée à chaque envoi de mail pour éviter
-     * toute expiration (limite V4 = 7 jours max).
      */
     private String resolveLogo() {
         String path = activeProfile + "/logos/logo_dark.png";
         log.info("[LOGO] Résolution du logo — profil actif : '{}', chemin Firebase : '{}'", activeProfile, path);
         try {
-            String url = firebaseStorage.getSignedUrl(path, LOGO_URL_DURATION_MS);
-            if (url != null && !url.isBlank()) {
-                log.info("[LOGO] ✅ URL signée récupérée avec succès pour : '{}' — longueur URL : {} caractères", path, url.length());
-                log.debug("[LOGO] URL complète : {}", url);
-                return url;
+            byte[] bytes = firebaseStorage.downloadBytes(path);
+            if (bytes != null && bytes.length > 0) {
+                String dataUri = "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes);
+                log.info("[LOGO] ✅ Logo téléchargé et encodé en base64 depuis Firebase : '{}' ({} bytes)", path, bytes.length);
+                return dataUri;
             } else {
-                log.warn("[LOGO] ❌ URL signée vide ou null pour : '{}' — le logo ne s'affichera pas dans le mail", path);
+                log.warn("[LOGO] ❌ Logo introuvable ou vide sur Firebase : '{}' — le logo ne s'affichera pas", path);
                 return "";
             }
         } catch (Exception e) {
-            log.error("[LOGO] ❌ Exception lors de la récupération de l'URL signée pour '{}' — cause : {}", path, e.getMessage(), e);
+            log.error("[LOGO] ❌ Erreur lors du téléchargement du logo '{}' : {}", path, e.getMessage(), e);
             return "";
         }
     }
