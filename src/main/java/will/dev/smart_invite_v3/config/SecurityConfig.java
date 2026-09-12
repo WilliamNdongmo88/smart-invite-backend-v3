@@ -81,6 +81,9 @@ public class SecurityConfig {
                         // Formulaire de contact public (visiteur anonyme ou connecté)
                         .requestMatchers(HttpMethod.POST, "/api/contact").permitAll()
 
+                        // Tracking anonyme des visiteurs (sans auth)
+                        .requestMatchers(HttpMethod.POST, "/api/track/**").permitAll()
+
                         // Admin
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
