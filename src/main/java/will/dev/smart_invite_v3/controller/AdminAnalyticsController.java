@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import will.dev.smart_invite_v3.dto.analytics.AnalyticsStatsResponse;
+import will.dev.smart_invite_v3.dto.analytics.VisitorOverviewResponse;
 import will.dev.smart_invite_v3.dto.analytics.VisitorRow;
 import will.dev.smart_invite_v3.dto.auth.response.ApiResponse;
 import will.dev.smart_invite_v3.service.impl.AnalyticsService;
@@ -41,6 +42,19 @@ public class AdminAnalyticsController {
         return ResponseEntity.ok(ApiResponse.success(
                 analyticsService.getStats(topPages),
                 "Statistiques récupérées"
+        ));
+    }
+
+    /**
+     * Vue d'ensemble pour les 6 stats cards de la page /admin/visitors.
+     * Retourne : byCountry, byBrowser, byOs, byDevice, topPages, visitsByDay
+     */
+    @GetMapping("/overview")
+    @Operation(summary = "Vue d'ensemble visiteurs — 6 stats cards")
+    public ResponseEntity<ApiResponse<VisitorOverviewResponse>> getOverview() {
+        return ResponseEntity.ok(ApiResponse.success(
+                analyticsService.getOverview(),
+                "Vue d'ensemble récupérée"
         ));
     }
 

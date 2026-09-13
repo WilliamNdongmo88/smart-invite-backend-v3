@@ -1,0 +1,9 @@
+Placer le fichier GeoLite2-City.mmdb dans ce dossier.
+
+Téléchargement gratuit :
+1. Créer un compte sur https://dev.maxmind.com
+2. Aller dans "Download Files"
+3. Télécharger "GeoLite2 City" → format .mmdb
+4. Copier GeoLite2-City.mmdb ici
+
+Ce fichier est ignoré par .gitignore (trop volumineux pour Git).
