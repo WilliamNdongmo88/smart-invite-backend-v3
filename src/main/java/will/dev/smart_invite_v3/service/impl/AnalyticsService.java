@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import will.dev.smart_invite_v3.dto.analytics.AnalyticsStatsResponse;
 import will.dev.smart_invite_v3.dto.analytics.AnalyticsStatsResponse.*;
+import will.dev.smart_invite_v3.dto.analytics.VisitorOverviewResponse;
 import will.dev.smart_invite_v3.dto.analytics.VisitorRow;
 import will.dev.smart_invite_v3.repository.VisitorPageViewRepository;
 import will.dev.smart_invite_v3.repository.VisitorRepository;
@@ -226,8 +227,102 @@ public class AnalyticsService {
     }
 
     // ─────────────────────────────────────────────────────────────────
-    //  Liste des visiteurs (tableau admin avec filtres)
+    //  Vue d'ensemble pour la page /admin/visitors (6 stats cards)
     // ─────────────────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public VisitorOverviewResponse getOverview() {
+        return new VisitorOverviewResponse(
+                overviewByCountry(),
+                overviewByBrowser(),
+                overviewByOs(),
+                overviewByDevice(),
+                overviewTopPages(),
+                overviewVisitsByDay()
+        );
+    }
+
+    private List<VisitorOverviewResponse.LabelCount> overviewByCountry() {
+        return labelCountOverview("""
+                SELECT COALESCE(v.country, 'Inconnu') AS label,
+                       COUNT(DISTINCT v.id)            AS cnt
+                FROM visitors v
+                GROUP BY label
+                ORDER BY cnt DESC
+                LIMIT 10
+                """);
+    }
+
+    private List<VisitorOverviewResponse.LabelCount> overviewByBrowser() {
+        return labelCountOverview("""
+                SELECT COALESCE(v.browser, 'Inconnu') AS label,
+                       COUNT(DISTINCT v.id)            AS cnt
+                FROM visitors v
+                GROUP BY label
+                ORDER BY cnt DESC
+                """);
+    }
+
+    private List<VisitorOverviewResponse.LabelCount> overviewByOs() {
+        return labelCountOverview("""
+                SELECT COALESCE(v.os, 'Inconnu') AS label,
+                       COUNT(DISTINCT v.id)       AS cnt
+                FROM visitors v
+                GROUP BY label
+                ORDER BY cnt DESC
+                """);
+    }
+
+    private List<VisitorOverviewResponse.LabelCount> overviewByDevice() {
+        return labelCountOverview("""
+                SELECT COALESCE(v.device, 'Inconnu') AS label,
+                       COUNT(DISTINCT v.id)           AS cnt
+                FROM visitors v
+                GROUP BY label
+                ORDER BY cnt DESC
+                """);
+    }
+
+    private List<VisitorOverviewResponse.PageViewCount> overviewTopPages() {
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = em.createNativeQuery("""
+                SELECT pv.page_url,
+                       COUNT(*) AS views
+                FROM visitor_page_views pv
+                WHERE pv.viewed_at >= NOW() - INTERVAL '30 days'
+                GROUP BY pv.page_url
+                ORDER BY views DESC
+                LIMIT 10
+                """).getResultList();
+
+        return rows.stream()
+                .map(r -> new VisitorOverviewResponse.PageViewCount(str(r[0]), longVal(r[1])))
+                .toList();
+    }
+
+    private List<VisitorOverviewResponse.DailyCount> overviewVisitsByDay() {
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = em.createNativeQuery("""
+                SELECT TO_CHAR(s.started_at, 'YYYY-MM-DD') AS period,
+                       COUNT(DISTINCT s.visitor_id)          AS cnt
+                FROM visitor_sessions s
+                WHERE s.started_at >= NOW() - INTERVAL '30 days'
+                GROUP BY period
+                ORDER BY period ASC
+                """).getResultList();
+
+        return rows.stream()
+                .map(r -> new VisitorOverviewResponse.DailyCount(str(r[0]), longVal(r[1])))
+                .toList();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<VisitorOverviewResponse.LabelCount> labelCountOverview(String sql) {
+        List<Object[]> rows = em.createNativeQuery(sql).getResultList();
+        return rows.stream()
+                .map(r -> new VisitorOverviewResponse.LabelCount(str(r[0]), longVal(r[1])))
+                .toList();
+    }
 
     /**
      * Retourne la liste des visiteurs avec leurs statistiques agrégées,

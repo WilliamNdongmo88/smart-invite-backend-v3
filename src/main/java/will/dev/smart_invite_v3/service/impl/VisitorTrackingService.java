@@ -37,6 +37,7 @@ public class VisitorTrackingService {
     private final VisitorSessionRepository  sessionRepo;
     private final VisitorPageViewRepository pageViewRepo;
     private final UserAgentParserService    uaParser;
+    private final GeoIpService             geoIpService;
 
     // ─────────────────────────────────────────────────────────────────
     //  identifyVisitor
@@ -59,17 +60,21 @@ public class VisitorTrackingService {
         String anonymizedIp = anonymize(ip);
 
         return visitorRepo.findByIpAddressAndDevice(anonymizedIp, parsed.device())
-                .orElseGet(() -> visitorRepo.save(
-                        Visitor.builder()
-                                .ipAddress(anonymizedIp)
-                                .device(parsed.device())
-                                .os(parsed.os())
-                                .browser(parsed.browser())
-                                // country/city : enrichissement externe optionnel (GeoIP)
-                                .country(null)
-                                .city(null)
-                                .build()
-                ));
+                .orElseGet(() -> {
+                    // Résolution géographique sur l'IP réelle (avant anonymisation)
+                    GeoIpService.GeoResult geo = geoIpService.resolve(ip);
+
+                    return visitorRepo.save(
+                            Visitor.builder()
+                                    .ipAddress(anonymizedIp)
+                                    .device(parsed.device())
+                                    .os(parsed.os())
+                                    .browser(parsed.browser())
+                                    .country(geo != null ? geo.country() : null)
+                                    .city(geo != null ? geo.city()    : null)
+                                    .build()
+                    );
+                });
     }
 
     // ─────────────────────────────────────────────────────────────────
