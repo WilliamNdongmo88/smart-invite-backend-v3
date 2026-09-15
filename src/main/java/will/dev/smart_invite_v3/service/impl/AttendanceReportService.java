@@ -160,17 +160,17 @@ public class AttendanceReportService {
     }
 
     private Table buildTable(List<Guest> guests, PdfFont bold, PdfFont normal, DeviceRgb headerColor) {
-        Table table = new Table(UnitValue.createPercentArray(new float[]{3, 3, 2}))
+        Table table = new Table(UnitValue.createPercentArray(new float[]{3, 3, 2, 1.5f}))
                 .setWidth(UnitValue.createPercentValue(100));
 
-        for (String h : new String[]{"Nom complet", "Email", "Téléphone"}) {
+        for (String h : new String[]{"Nom complet", "Email", "Téléphone", "Table"}) {
             table.addHeaderCell(new Cell()
                     .add(new Paragraph(h).setFont(bold).setFontSize(11).setFontColor(DeviceRgb.WHITE))
                     .setBackgroundColor(headerColor).setPadding(6));
         }
 
         if (guests.isEmpty()) {
-            table.addCell(new Cell(1, 3)
+            table.addCell(new Cell(1, 4)
                     .add(new Paragraph("Aucun invité").setFont(normal).setFontSize(11))
                     .setPadding(6));
         } else {
@@ -178,6 +178,7 @@ public class AttendanceReportService {
                 table.addCell(cell(g.getFullName(), normal));
                 table.addCell(cell(g.getEmail() != null ? g.getEmail() : "—", normal));
                 table.addCell(cell(g.getPhoneNumber() != null ? g.getPhoneNumber() : "—", normal));
+                table.addCell(cell(g.getTableNumber() != null ? String.valueOf(g.getTableNumber()) : "—", normal));
             }
         }
         return table;
