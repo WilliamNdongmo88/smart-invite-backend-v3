@@ -26,6 +26,10 @@ public record RegisterRequest(
         @Schema(description = "Canal de notification préféré", allowableValues = {"EMAIL", "WHATSAPP", "BOTH"})
         NotificationMode notificationMode,
 
+        @Schema(description = "Code de recommandation (optionnel), lié au compte, aux événements et aux paiements")
+        @Size(max = 40)
+        String referralCode,
+
         @NotBlank(message = "Le mot de passe est obligatoire")
         @Size(min = 8, max = 100)
         String password

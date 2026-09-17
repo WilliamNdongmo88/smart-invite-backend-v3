@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import will.dev.smart_invite_v3.dto.admin.AdminEventDetailResponse;
 import will.dev.smart_invite_v3.dto.admin.ContactReplyRequest;
 import will.dev.smart_invite_v3.dto.admin.EventSummaryResponse;
 import will.dev.smart_invite_v3.dto.admin.OrganizerSummaryResponse;
@@ -13,9 +14,11 @@ import will.dev.smart_invite_v3.entity.Payment;
 import will.dev.smart_invite_v3.entity.User;
 import will.dev.smart_invite_v3.entity.UserNews;
 import will.dev.smart_invite_v3.enums.PaymentStatus;
+import will.dev.smart_invite_v3.enums.RsvpStatus;
 import will.dev.smart_invite_v3.enums.UserRole;
 import will.dev.smart_invite_v3.exception.UserNotFoundException;
 import will.dev.smart_invite_v3.repository.EventRepository;
+import will.dev.smart_invite_v3.repository.GuestRepository;
 import will.dev.smart_invite_v3.repository.PaymentRepository;
 import will.dev.smart_invite_v3.repository.UserNewsRepository;
 import will.dev.smart_invite_v3.repository.UserRepository;
@@ -35,6 +38,7 @@ public class AdminServiceImpl implements AdminService {
     private final UserRepository     userRepository;
     private final EventRepository    eventRepository;
     private final PaymentRepository  paymentRepository;
+    private final GuestRepository    guestRepository;
     private final UserNewsRepository userNewsRepository;
     private final WhatsAppService    whatsAppService;
     private final EmailService       emailService;
@@ -92,6 +96,68 @@ public class AdminServiceImpl implements AdminService {
                     events
             );
         }).toList();
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Détail d'un événement (vue admin)
+    // ──────────────────────────────────────────────────────────────────
+
+    @Override
+    public AdminEventDetailResponse getEventDetail(Long eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Événement introuvable : " + eventId));
+
+        User organizer = event.getOrganizer();
+
+        AdminEventDetailResponse.PaymentDetail payment = paymentRepository
+                .findTopByEventIdAndOrganizerIdOrderByCreatedAtDesc(eventId, organizer.getId())
+                .map(p -> new AdminEventDetailResponse.PaymentDetail(
+                        p.getStatus(),
+                        p.getQuota(),
+                        p.getPaidQuota(),
+                        p.getAmount(),
+                        p.getRejectionReason(),
+                        p.getProofUrl(),
+                        p.getReferralCode(),
+                        p.getCreatedAt()
+                ))
+                .orElse(null);
+
+        long total     = guestRepository.countByEventId(eventId);
+        long confirmed = guestRepository.countByEventIdAndRsvpStatus(eventId, RsvpStatus.CONFIRMED);
+        long pending   = guestRepository.countByEventIdAndRsvpStatus(eventId, RsvpStatus.PENDING);
+        long declined  = guestRepository.countByEventIdAndRsvpStatus(eventId, RsvpStatus.DECLINED);
+        int maxGuests  = event.getMaxGuests() != null ? event.getMaxGuests() : 0;
+        double occupancy = maxGuests > 0
+                ? Math.round((confirmed / (double) maxGuests) * 1000.0) / 10.0
+                : 0.0;
+
+        AdminEventDetailResponse.StatsDetail stats = new AdminEventDetailResponse.StatsDetail(
+                total, confirmed, pending, declined, occupancy);
+
+        return new AdminEventDetailResponse(
+                event.getId(),
+                event.getTitle(),
+                event.getDescription(),
+                event.getType(),
+                event.getStatus(),
+                event.getBudget(),
+                event.getMaxGuests(),
+                event.getConcernedNames(),
+                event.getEventDate(),
+                event.getDateLabel(),
+                event.getVenueName(),
+                event.getVenueCity(),
+                event.getCouplePhotoUrl(),
+                event.getReferralCode(),
+                event.getCreatedAt(),
+                organizer.getId(),
+                organizer.getName(),
+                organizer.getEmail(),
+                organizer.getPhone(),
+                payment,
+                stats
+        );
     }
 
     // ──────────────────────────────────────────────────────────────────

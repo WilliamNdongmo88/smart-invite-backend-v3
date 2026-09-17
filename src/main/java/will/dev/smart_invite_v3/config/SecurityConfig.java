@@ -84,6 +84,9 @@ public class SecurityConfig {
                         // Tracking anonyme des visiteurs (sans auth)
                         .requestMatchers(HttpMethod.POST, "/api/track/**").permitAll()
 
+                        // Validation publique d'un code de recommandation (sans auth)
+                        .requestMatchers(HttpMethod.GET,  "/api/referrers/validate").permitAll()
+
                         // Admin
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 

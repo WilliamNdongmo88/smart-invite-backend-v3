@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import will.dev.smart_invite_v3.dto.admin.AdminEventDetailResponse;
 import will.dev.smart_invite_v3.dto.admin.ContactReplyRequest;
 import will.dev.smart_invite_v3.dto.admin.OrganizerSummaryResponse;
 import will.dev.smart_invite_v3.dto.admin.UserNewsResponse;
@@ -39,6 +40,16 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Void>> blockUser(@PathVariable Long userId) {
         adminService.blockUser(userId);
         return ResponseEntity.ok(ApiResponse.success("Utilisateur bloqué"));
+    }
+
+    @GetMapping("/events/{eventId}")
+    @Operation(summary = "Détail complet d'un événement (sans restriction propriétaire)")
+    public ResponseEntity<ApiResponse<AdminEventDetailResponse>> getEventDetail(
+            @PathVariable Long eventId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                adminService.getEventDetail(eventId),
+                "Détail de l'événement récupéré"));
     }
 
     @PatchMapping("/users/{userId}/unblock")

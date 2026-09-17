@@ -64,6 +64,9 @@ public class Payment {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "referral_code", length = 40)
+    private String referralCode;
+
     @PrePersist
     void onCreate() {
         createdAt = LocalDateTime.now();

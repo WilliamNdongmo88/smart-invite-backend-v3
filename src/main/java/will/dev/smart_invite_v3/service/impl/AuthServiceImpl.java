@@ -34,6 +34,7 @@ import will.dev.smart_invite_v3.repository.UserRepository;
 import will.dev.smart_invite_v3.service.AuthService;
 import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.OtpService;
+import will.dev.smart_invite_v3.service.ReferrerService;
 import will.dev.smart_invite_v3.service.WhatsAppService;
 import will.dev.smart_invite_v3.constants.RedisKeys;
 import will.dev.smart_invite_v3.config.JwtProperties;
@@ -74,6 +75,7 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenService refreshTokenService;
     private final JwtProperties jwtProperties;
     private final RedisService redisService;
+    private final ReferrerService referrerService;
 
     @Value("${app.env.apiUrl}")
     private String apiUrl;
@@ -95,6 +97,13 @@ public class AuthServiceImpl implements AuthService {
             throw new UserAlreadyExistsException();
         }
 
+        String referralCode = request.referralCode() != null
+                ? request.referralCode().trim().toUpperCase()
+                : null;
+        if (referralCode != null && !referralCode.isBlank()) {
+            referrerService.getActiveByCode(referralCode);
+        }
+
         User user = User.builder()
                 .name(request.name())
                 .email(request.email())
@@ -106,6 +115,7 @@ public class AuthServiceImpl implements AuthService {
                 .notifyMe(true)
                 .isActive(false)
                 .isBlocked(false)
+                .referralCode(referralCode)
                 .build();
 
         userRepository.save(user);

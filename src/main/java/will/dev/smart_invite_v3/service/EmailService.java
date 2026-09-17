@@ -60,4 +60,21 @@ public interface EmailService {
      * @param replyMessage  corps de la réponse
      */
     void sendAdminReply(String toEmail, String senderName, String replyMessage);
+
+/**
+     * Notifie (admin ou recommandateur) qu'un paiement lié à un code de
+     * recommandation a été validé.
+     *
+     * @param toEmail       email du destinataire
+     * @param recipientName nom du destinataire
+     * @param organizerName nom de l'organisateur ayant payé
+     * @param eventTitle    titre de l'événement
+     * @param quota         nombre d'invités payés
+     * @param amount        montant validé (null = version recommandateur : la
+     *                      commission à 24h est annoncée à la place du montant)
+     * @param referralCode  code de recommandation utilisé
+     */
+    void sendReferralPaymentNotification(String toEmail, String recipientName,
+                                         String organizerName, String eventTitle,
+                                         int quota, BigDecimal amount, String referralCode);
 }

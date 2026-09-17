@@ -110,6 +110,9 @@ public class User implements UserDetails{
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "referral_code", length = 40)
+    private String referralCode;
+
     @PrePersist
     public void onCreate() {
         createdAt = LocalDateTime.now();

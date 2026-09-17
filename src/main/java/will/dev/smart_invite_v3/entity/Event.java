@@ -137,6 +137,9 @@ public class Event {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "referral_code", length = 40)
+    private String referralCode;
+
     @PrePersist
     void onCreate() {
         createdAt = LocalDateTime.now();

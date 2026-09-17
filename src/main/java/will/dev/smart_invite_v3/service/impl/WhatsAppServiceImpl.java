@@ -10,6 +10,7 @@ import org.springframework.web.client.RestTemplate;
 import will.dev.smart_invite_v3.entity.ThankYouTemplate;
 import will.dev.smart_invite_v3.service.WhatsAppService;
 
+import java.math.BigDecimal;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -259,6 +260,37 @@ public class WhatsAppServiceImpl implements WhatsAppService {
             "🌐 smart-invite.com"
         );
         send(adminPhone, body);
+    }
+
+    @Override
+    public void sendReferralPaymentMessage(String phoneNumber, String recipientName,
+                                           String organizerName, String eventTitle,
+                                           int quota, BigDecimal amount, String referralCode) {
+        String moneyLine = amount != null
+                ? "💰 Montant      : *" + amount + " XAF*"
+                : "💵 Votre commission vous sera payée sous 24h.";
+        String message = String.join("\n",
+            "╔═════════════════════╗",
+            "               ✉️ *SMART INVITE*",
+            "╚═════════════════════╝",
+            "",
+            "💳 *Paiement validé !*",
+            "",
+            "Bonjour *" + recipientName + "*,",
+            "",
+            "Le code *" + referralCode + "* a été utilisé :",
+            "",
+            "🎪 Événement     : *" + eventTitle + "*",
+            "👤 Organisateur : *" + organizerName + "*",
+            "👥 Quota        : *" + quota + " invités*",
+            "",
+            moneyLine,
+            "",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "               🌐 smart-invite.com",
+            "━━━━━━━━━━━━━━━━━━━━━━"
+        );
+        send(phoneNumber, message);
     }
 
     @Override

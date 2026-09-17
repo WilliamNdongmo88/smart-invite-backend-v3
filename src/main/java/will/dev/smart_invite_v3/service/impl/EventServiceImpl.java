@@ -67,6 +67,7 @@ public class EventServiceImpl implements EventService {
                 .venueName(request.extractVenueName())
                 .venueCity(request.extractVenueCity())
                 .couplePhotoUrl(request.extractCoverPhotoUrl())
+                .referralCode(organizer.getReferralCode())
                 .organizer(organizer)
                 .build();
 
