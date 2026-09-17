@@ -12,13 +12,16 @@ import will.dev.smart_invite_v3.dto.payment.response.PaymentPlanResponse;
 import will.dev.smart_invite_v3.dto.payment.response.PaymentResponse;
 import will.dev.smart_invite_v3.entity.Event;
 import will.dev.smart_invite_v3.entity.Payment;
+import will.dev.smart_invite_v3.entity.Referrer;
 import will.dev.smart_invite_v3.entity.User;
+import will.dev.smart_invite_v3.enums.NotificationMode;
 import will.dev.smart_invite_v3.enums.PaymentStatus;
 import will.dev.smart_invite_v3.exception.EventNotFoundException;
 import will.dev.smart_invite_v3.exception.PaymentException;
 import will.dev.smart_invite_v3.exception.UserNotFoundException;
 import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.PaymentRepository;
+import will.dev.smart_invite_v3.repository.ReferrerRepository;
 import will.dev.smart_invite_v3.repository.UserRepository;
 import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.FirebaseStorageService;
@@ -38,6 +41,12 @@ public class PaymentServiceImpl implements PaymentService {
     @Value("${spring.profiles.active}")
     private String path;
 
+    @Value("${app.admin.email}")
+    private String adminEmail;
+
+    @Value("${app.admin.phone}")
+    private String adminPhone;
+
     private static final BigDecimal UNIT_PRICE = BigDecimal.valueOf(52);
     private static final Set<String> ALLOWED_TYPES =
             Set.of("application/pdf", "image/png", "image/jpeg", "image/jpg");
@@ -45,6 +54,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository    paymentRepository;
     private final EventRepository      eventRepository;
     private final UserRepository       userRepository;
+    private final ReferrerRepository   referrerRepository;
     private final FirebaseStorageService firebaseStorage;
     private final EmailService         emailService;
     private final WhatsAppService      whatsAppService;
@@ -90,6 +100,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .quota(request.quota())
                 .amount(amount)
                 .status(PaymentStatus.PENDING)
+                .referralCode(organizer.getReferralCode())
                 .build();
 
         return PaymentResponse.from(paymentRepository.save(payment));
@@ -202,7 +213,63 @@ public class PaymentServiceImpl implements PaymentService {
             log.warn("Notification organisateur échouée pour paiement {} : {}", paymentId, e.getMessage());
         }
 
+        if (request.approved()) {
+            notifyReferralParties(saved);
+        }
+
         return PaymentResponse.from(saved);
+    }
+
+    /**
+     * Notifie l'admin et le recommandateur quand un paiement lié à un code de
+     * recommandation est approuvé. Le canal (Email ou WhatsApp) suit le mode de
+     * notification choisi lors de la création du recommandateur.
+     */
+    private void notifyReferralParties(Payment payment) {
+        if (payment.getReferralCode() == null) return;
+
+        referrerRepository.findByCode(payment.getReferralCode()).ifPresent(referrer -> {
+            NotificationMode mode = referrer.getNotificationMode() != null
+                    ? referrer.getNotificationMode()
+                    : NotificationMode.EMAIL;
+
+            String eventTitle    = payment.getEvent().getTitle();
+            String organizerName = payment.getOrganizer().getName();
+            int quota            = payment.getQuota();
+            BigDecimal amount    = payment.getAmount();
+            String code          = payment.getReferralCode();
+
+            sendReferralNotification(mode,
+                    "Admin Smart Invite", adminEmail, adminPhone,
+                    organizerName, eventTitle, quota, amount, code);
+            sendReferralNotification(mode,
+                    referrer.getName(), referrer.getEmail(), referrer.getPhone(),
+                    organizerName, eventTitle, quota, null, code);
+        });
+    }
+
+    private void sendReferralNotification(NotificationMode mode,
+                                          String recipientName, String recipientEmail, String recipientPhone,
+                                          String organizerName, String eventTitle, int quota,
+                                          BigDecimal amount, String code) {
+        if ((mode == NotificationMode.WHATSAPP || mode == NotificationMode.BOTH)
+                && recipientPhone != null && !recipientPhone.isBlank()) {
+            try {
+                whatsAppService.sendReferralPaymentMessage(
+                        recipientPhone, recipientName, organizerName, eventTitle, quota, amount, code);
+            } catch (Exception e) {
+                log.warn("WhatsApp recommandation échoué pour {} : {}", recipientName, e.getMessage());
+            }
+        }
+        if (mode != NotificationMode.WHATSAPP
+                && recipientEmail != null && !recipientEmail.isBlank()) {
+            try {
+                emailService.sendReferralPaymentNotification(
+                        recipientEmail, recipientName, organizerName, eventTitle, quota, amount, code);
+            } catch (Exception e) {
+                log.warn("Email recommandation échoué pour {} : {}", recipientName, e.getMessage());
+            }
+        }
     }
 
     private String buildPaymentReviewMessage(String eventTitle, boolean approved, String rejectionReason) {

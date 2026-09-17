@@ -1,5 +1,6 @@
 package will.dev.smart_invite_v3.service;
 
+import will.dev.smart_invite_v3.dto.admin.AdminEventDetailResponse;
 import will.dev.smart_invite_v3.dto.admin.ContactReplyRequest;
 import will.dev.smart_invite_v3.dto.admin.OrganizerSummaryResponse;
 import will.dev.smart_invite_v3.dto.admin.UserNewsResponse;
@@ -9,6 +10,9 @@ import java.util.List;
 public interface AdminService {
 
     List<OrganizerSummaryResponse> getAllOrganizers();
+
+    /** Détail complet d'un événement (sans restriction propriétaire) */
+    AdminEventDetailResponse getEventDetail(Long eventId);
 
     void blockUser(Long userId);
 

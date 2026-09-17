@@ -305,6 +305,26 @@ public class BrevoEmailServiceImpl implements EmailService {
         sendEmail(adminEmail, "Nouveau message de contact — Smart Invite", html, List.of());
     }
 
+    @Override
+    public void sendReferralPaymentNotification(String toEmail, String recipientName,
+                                                String organizerName, String eventTitle,
+                                                int quota, BigDecimal amount, String referralCode) {
+        String moneyLine = amount != null
+                ? "💰 Montant validé : <strong>" + amount + " XAF</strong>"
+                : "💵 Votre commission vous sera payée sous 24h.";
+        String html = emailTemplateService.render(Map.of(
+                "subject", "Paiement validé avec le code " + referralCode,
+                "title",   "Code de recommandation utilisé !",
+                "content", "Bonjour <strong style=\"color:#c9a84c;\">" + recipientName + "</strong>,<br/><br/>" +
+                           "Le code de recommandation <strong>" + referralCode + "</strong> a été utilisé et le paiement validé :<br/><br/>" +
+                           "🎪 Événement : <strong>" + eventTitle + "</strong><br/>" +
+                           "👤 Organisateur : <strong>" + organizerName + "</strong><br/>" +
+                           "👥 Quota : <strong>" + quota + " invités</strong><br/><br/>" +
+                           moneyLine
+        ));
+        sendEmail(toEmail, "Paiement validé via code " + referralCode, html, List.of());
+    }
+
     private void sendEmail(String to, String subject, String htmlContent,
                            List<SendSmtpEmailAttachment> attachments) {
         try {

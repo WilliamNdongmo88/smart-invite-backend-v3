@@ -28,5 +28,7 @@ public interface GuestRepository extends JpaRepository<Guest, Long> {
 
     int countByEventId(Long eventId);
 
+    long countByEventIdAndRsvpStatus(Long eventId, RsvpStatus rsvpStatus);
+
     List<Guest> findAllByEventIdAndRsvpStatus(Long eventId, RsvpStatus rsvpStatus);
 }
