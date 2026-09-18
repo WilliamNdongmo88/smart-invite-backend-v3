@@ -75,7 +75,11 @@ public class CheckinServiceImpl implements CheckinService {
                 .orElseThrow(() -> new UserNotFoundException("Organisateur introuvable"));
 
         String rawPassword = request.whatsapp().replaceAll("\\+", "");
-        String email = request.userName().toLowerCase() + "@agent.smartinvite.local";
+        String email = request.userName()
+                .toLowerCase()
+                .replace(" ", ".")
+                + "@agent.smartinvite.local";
+
 
         if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Un agent avec ce nom d'utilisateur existe déjà");
