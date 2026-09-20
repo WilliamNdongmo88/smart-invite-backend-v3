@@ -24,7 +24,7 @@ public interface EmailService {
                                byte[] qrCodeBytes, String eventPageUrl);
 
     void sendReminderEmail(String toEmail, String guestName, String eventTitle,
-                           String qrCodeUrl, String pdfUrl);
+                           String rsvpLink);
 
     void sendNewGuestNotification(String organizerEmail, String guestName, String eventTitle);
 

@@ -143,15 +143,16 @@ public class BrevoEmailServiceImpl implements EmailService {
 
     @Override
     public void sendReminderEmail(String toEmail, String guestName, String eventTitle,
-                                   String qrCodeUrl, String pdfUrl) {
+                                   String rsvpLink) {
         String html = emailTemplateService.render(Map.of(
                 "subject",  "Rappel — " + eventTitle,
                 "title",    "Rappel d'invitation",
-                "content",  "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/>" +
-                            "Ceci est un rappel pour l'événement <strong>" + eventTitle + "</strong>.<br/>" +
-                            "Votre QR Code est disponible ci-dessous.",
-                "ctaUrl",   pdfUrl != null ? pdfUrl : qrCodeUrl,
-                "ctaLabel", "Voir mon invitation"
+                "content",  "Cher(e) <strong style=\"color:#c9a84c;\">" + guestName + "</strong>,<br/><br/>" +
+                            "Nous n'avons pas encore reçu votre réponse concernant l'événement " +
+                            "<strong>" + eventTitle + "</strong>.<br/><br/>" +
+                            "Merci de confirmer ou décliner votre présence en cliquant sur le bouton ci-dessous.",
+                "ctaUrl",   rsvpLink,
+                "ctaLabel", "Répondre à l'invitation"
         ));
         sendEmail(toEmail, "Rappel — " + eventTitle, html, List.of());
     }

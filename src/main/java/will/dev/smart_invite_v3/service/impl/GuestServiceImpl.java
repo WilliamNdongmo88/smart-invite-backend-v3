@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,9 @@ public class GuestServiceImpl implements GuestService {
     private final PaymentRepository    paymentRepository;
     private final EmailService         emailService;
     private final WhatsAppService      whatsAppService;
+
+    @Value("${app.frontend.url:http://localhost:4200}")
+    private String frontendUrl;
 
     // ---- US-015 ----
 
@@ -135,8 +139,6 @@ public class GuestServiceImpl implements GuestService {
         Guest guest = resolveOwnedGuest(guestId, organizerId);
 
         Invitation inv = invitationRepository.findByGuestId(guestId).orElse(null);
-        String qrUrl  = inv != null ? inv.getQrCodeUrl() : null;
-        String pdfUrl = inv != null ? inv.getPdfUrl()    : null;
 
         NotificationMode mode = guest.getNotificationMode();
         String email       = guest.getEmail();
@@ -147,16 +149,25 @@ public class GuestServiceImpl implements GuestService {
         String eventPrefix = guest.getEvent().getType() != null
                 ? guest.getEvent().getType().invitationPrefix() : "à ";
 
+        // Lien RSVP : {frontendUrl}/invitations/{token}/rsvp
+        String rsvpLink = token != null
+                ? frontendUrl + "/invitations/" + token + "/rsvp"
+                : null;
+
         boolean sentAny = false;
 
         // EMAIL ou BOTH
         if ((mode == NotificationMode.EMAIL || mode == NotificationMode.BOTH || mode == null)
                 && email != null && !email.isBlank()) {
-            try {
-                emailService.sendReminderEmail(email, guestName, eventTitle, qrUrl, pdfUrl);
-                sentAny = true;
-            } catch (Exception e) {
-                log.warn("Rappel email échoué pour guest {} : {}", guestId, e.getMessage());
+            if (rsvpLink == null) {
+                log.warn("Rappel email ignoré pour guest {} : pas d'invitation/token", guestId);
+            } else {
+                try {
+                    emailService.sendReminderEmail(email, guestName, eventTitle, rsvpLink);
+                    sentAny = true;
+                } catch (Exception e) {
+                    log.warn("Rappel email échoué pour guest {} : {}", guestId, e.getMessage());
+                }
             }
         }
 
