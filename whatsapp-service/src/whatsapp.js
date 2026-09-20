@@ -165,6 +165,9 @@ function createClient() {
 
         // OUI
         try {
+            // Accusé de réception immédiat (message texte — /send, pas de memoization bug)
+            await ensureChat(c, msg.from);
+
             const ackMessage = [
                 "╔═════════════════════╗",
                 "               ✉️ *SMART INVITE*",
@@ -184,6 +187,7 @@ function createClient() {
 
             await c.sendMessage(msg.from, ackMessage);
 
+            // Confirmer côté Java et récupérer les URLs
             const response = await axios.post(
                 `${backendUrl}/api/invitations/${rsvp.token}/rsvp`,
                 { status: 'CONFIRMED' }
@@ -192,40 +196,55 @@ function createClient() {
 
             const data      = response.data?.data || response.data;
             const qrCodeUrl = data?.qrCodeUrl;
-            const pdfUrl    = data?.pdfUrl;
 
+            // ── Envoi du QR via /api/send-files (contourne le bug de memoization) ──
+            // On télécharge le QR depuis Firebase → base64 → POST /api/send-files
             if (qrCodeUrl) {
                 try {
-                    const qrMedia = await MessageMedia.fromUrl(qrCodeUrl, { unsafeMime: true });
-                    await c.sendMessage(msg.from, qrMedia, {
-                        caption: '📱 *Votre QR Code d\'accès*\nPrésentez-le à l\'entrée de l\'événement.',
-                    });
-                } catch (e) {
-                    console.warn('[WhatsApp] Échec envoi QR :', e.message);
-                }
-            }
+                    const qrResponse = await axios.get(qrCodeUrl, { responseType: 'arraybuffer' });
+                    const qrBase64   = Buffer.from(qrResponse.data).toString('base64');
 
-            if (pdfUrl) {
-                try {
-                    const pdfMedia = await MessageMedia.fromUrl(pdfUrl, { unsafeMime: true });
-                    await c.sendMessage(msg.from, pdfMedia, {
-                        caption: '🎫 *Votre carte d\'invitation*',
-                    });
+                    const serviceUrl = `http://localhost:${process.env.PORT || 3001}`;
+                    await axios.post(
+                        `${serviceUrl}/api/send-files`,
+                        {
+                            to:      senderNumber,
+                            qrBase64,
+                            message: [
+                                '━━━━━━━━━━━━━━━━━━━━━━',
+                                '🎊 Nous avons hâte de vous accueillir !',
+                                `À très bientôt ${rsvp.eventType} *${rsvp.eventTitle}* 💫`,
+                                '━━━━━━━━━━━━━━━━━━━━━━',
+                                '',
+                                '╔═════════════════════╗',
+                                '               🌐 smart-invite.com',
+                                '╚═════════════════════╝',
+                            ].join('\n'),
+                        },
+                        {
+                            headers: {
+                                'Content-Type':  'application/json',
+                                'x-api-secret':  process.env.API_SECRET,
+                            },
+                        }
+                    );
+                    console.log(`[WhatsApp] RSVP CONFIRMED + QR envoyé à ${senderNumber}`);
                 } catch (e) {
-                    console.warn('[WhatsApp] Échec envoi PDF :', e.message);
+                    console.warn('[WhatsApp] Échec envoi QR via send-files :', e.message);
                 }
+            } else {
+                // Pas de QR — envoyer juste le message de clôture en texte
+                await c.sendMessage(msg.from, [
+                    '━━━━━━━━━━━━━━━━━━━━━━',
+                    '🎊 Nous avons hâte de vous accueillir !',
+                    `À très bientôt ${rsvp.eventType} *${rsvp.eventTitle}* 💫`,
+                    '━━━━━━━━━━━━━━━━━━━━━━',
+                    '',
+                    '╔═════════════════════╗',
+                    '               🌐 smart-invite.com',
+                    '╚═════════════════════╝',
+                ].join('\n'));
             }
-
-            await c.sendMessage(msg.from, [
-                '━━━━━━━━━━━━━━━━━━━━━━',
-                '🎊 Nous avons hâte de vous accueillir !',
-                `À très bientôt ${rsvp.eventType} *${rsvp.eventTitle}* 💫`,
-                '━━━━━━━━━━━━━━━━━━━━━━',
-                '',
-                '╔═════════════════════╗',
-                '               🌐 smart-invite.com',
-                '╚═════════════════════╝',
-            ].join('\n'));
 
             console.log(`[WhatsApp] RSVP CONFIRMED + documents envoyés à ${senderNumber}`);
 
@@ -239,6 +258,30 @@ function createClient() {
     });
 
     return c;
+}
+
+// ── Helper : pré-ouvrir un chat pour éviter le bug de memoization ─────────────
+// whatsapp-web.js v1.34.x : sendMessage(string) appelle findOrCreateLatestChat
+// qui peut lever "r" ou "id property undefined" pour les chats non encore en mémoire.
+async function ensureChat(client, chatId, maxRetries = 3) {
+    for (let i = 1; i <= maxRetries; i++) {
+        try {
+            await client.pupPage.evaluate(async (id) => {
+                const wid = window.require('WAWebWidFactory').createWid(id);
+                const existing = window.require('WAWebCollections').Chat.get(wid);
+                if (!existing) {
+                    await window.require('WAWebFindChatAction').findOrCreateLatestChat(wid);
+                }
+            }, chatId);
+            return; // succès
+        } catch (err) {
+            if (i < maxRetries) {
+                await new Promise(r => setTimeout(r, 1500));
+            } else {
+                console.warn(`[WhatsApp] ensureChat échoué pour ${chatId} après ${maxRetries} tentatives :`, err.message);
+            }
+        }
+    }
 }
 
 // ── Reconnexion avec délai ────────────────────────────────────────────────────
