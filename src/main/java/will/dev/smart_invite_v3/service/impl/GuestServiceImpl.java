@@ -188,7 +188,7 @@ public class GuestServiceImpl implements GuestService {
 
         if (!sentAny) {
             throw new RuntimeException(
-                "Impossible d'envoyer le rappel : aucun contact valide pour le mode " + mode);
+                "Impossible d'envoyer le rappel : aucune invitation n’a encore été envoyée à ce contact " + mode);
         }
     }
 
