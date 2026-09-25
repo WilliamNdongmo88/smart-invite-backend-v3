@@ -48,7 +48,7 @@ services:
       - redis_data:/data
     networks:
       - smart-invite_net
-    command: redis-server --appendonly yes
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--save", "60", "1"]
 
   adminer:
     image: adminer
