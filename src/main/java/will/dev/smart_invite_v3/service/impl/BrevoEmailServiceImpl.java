@@ -298,9 +298,9 @@ public class BrevoEmailServiceImpl implements EmailService {
                            "Un visiteur vient de vous envoyer un message depuis le formulaire de contact :<br/><br/>" +
                            "<strong>Nom :</strong> <span style=\"color:#c9a84c;\">" + senderName + "</span><br/>" +
                            "<strong>Email de réponse :</strong> <a href=\"mailto:" + senderEmail + "\">" + senderEmail + "</a><br/><br/>" +
-                           "<strong>Message :</strong><br/>" +
+                           "<strong>Message :</strong><br/> A lire sur la plateforme." +
                            "<blockquote style=\"border-left:3px solid #c9a84c;padding-left:12px;color:#555;\">" +
-                           message.replace("\n", "<br/>") +
+                           //message.replace("\n", "<br/>") +
                            "</blockquote>"
         ));
         sendEmail(adminEmail, "Nouveau message de contact — Smart Invite", html, List.of());

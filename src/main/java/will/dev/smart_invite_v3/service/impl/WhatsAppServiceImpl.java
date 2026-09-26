@@ -254,8 +254,8 @@ public class WhatsAppServiceImpl implements WhatsAppService {
             "📱 WhatsApp: *" + senderPhone + "*",
             "",
             "━━━━━━━━━━━━━━━━━━━━━━",
-            "💬 *Message :*",
-            message,
+            "💬 *Message :* A lire sur la plateforme.",
+            //message,
             "━━━━━━━━━━━━━━━━━━━━━━",
             "🌐 smart-invite.com"
         );
