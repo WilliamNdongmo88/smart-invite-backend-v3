@@ -84,6 +84,10 @@ public interface EmailService {
      *                      commission à 24h est annoncée à la place du montant)
      * @param referralCode  code de recommandation utilisé
      */
+    void sendReferralPaymentNotification(String toEmail, String recipientName,
+                                         String organizerName, String eventTitle,
+                                         int quota, BigDecimal amount, String referralCode);
+
     /**
      * Notifie l'admin par email qu'un envoi WhatsApp a échoué silencieusement.
      *
