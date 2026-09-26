@@ -14,8 +14,9 @@ import will.dev.smart_invite_v3.service.WhatsAppService;
 @RequiredArgsConstructor
 public class NotificationDispatcher {
 
-    private final EmailService    emailService;
-    private final WhatsAppService whatsAppService;
+    private final EmailService             emailService;
+    private final WhatsAppService          whatsAppService;
+    private final NotificationAlertService alertService;
 
     /**
      * Envoie le lien RSVP selon le canal choisi par l'invité.
@@ -27,18 +28,17 @@ public class NotificationDispatcher {
         String prefix = eventType != null ? eventType.invitationPrefix() : "à ";
 
         if (shouldSendEmail(mode) && hasValue(email)) {
-            trySend("email RSVP", () ->
+            trySend("email RSVP — " + guestName, email, false, () ->
                 emailService.sendRsvpInviteEmail(email, guestName, eventTitle, eventType, rsvpLink));
         }
         if (shouldSendWhatsApp(mode) && hasValue(phoneNumber)) {
-            trySend("WhatsApp RSVP", () ->
+            trySend("WhatsApp RSVP — " + guestName, phoneNumber, true, () ->
                 whatsAppService.sendRsvpInviteMessage(phoneNumber, guestName, eventTitle, prefix, token));
         }
     }
 
     /**
      * Envoie la confirmation (QR + lien page événement) selon le canal choisi.
-     * Le PDF n'est plus joint — le lien vers la page de l'événement est envoyé à la place.
      */
     public void sendConfirmation(NotificationMode mode,
                                  String email, String phoneNumber,
@@ -47,14 +47,12 @@ public class NotificationDispatcher {
                                  String qrCodeUrl, String eventPageUrl,
                                  boolean fromLink) {
         if (shouldSendEmail(mode) && hasValue(email)) {
-            trySend("email confirmation", () ->
+            trySend("email confirmation — " + guestName, email, false, () ->
                 emailService.sendConfirmationEmail(email, guestName, eventType, eventTitle, qrBytes, eventPageUrl));
         }
         if (shouldSendWhatsApp(mode) && hasValue(phoneNumber)) {
-            // Le prefix est calculé dès que le type est connu, quel que soit le canal d'inscription
-            // (RSVP classique ou via lien public). Le message de confirmation doit toujours être envoyé.
             String prefix = eventType != null ? eventType.invitationPrefix() : "";
-            trySend("WhatsApp confirmation", () ->
+            trySend("WhatsApp confirmation — " + guestName, phoneNumber, true, () ->
                 whatsAppService.sendConfirmationMessage(phoneNumber, guestName, prefix, eventTitle, qrBytes, eventPageUrl));
         }
     }
@@ -71,10 +69,10 @@ public class NotificationDispatcher {
         String phoneNumber = organizer.getPhone();
 
         if (shouldSendEmail(mode) && hasValue(email)) {
-            trySend("email organisateur", emailAction);
+            trySend("email organisateur — " + organizer.getEmail(), email, false, emailAction);
         }
         if (shouldSendWhatsApp(mode) && hasValue(phoneNumber)) {
-            trySend("WhatsApp organisateur", whatsAppAction);
+            trySend("WhatsApp organisateur — " + organizer.getPhone(), phoneNumber, true, whatsAppAction);
         }
     }
 
@@ -92,11 +90,25 @@ public class NotificationDispatcher {
         return value != null && !value.isBlank();
     }
 
-    private void trySend(String label, Runnable action) {
+    /**
+     * Tente d'exécuter une action de notification.
+     * En cas d'échec, loggue en WARN et déclenche une alerte admin via {@link NotificationAlertService}.
+     *
+     * @param label       Description lisible pour les logs et l'alerte admin
+     * @param recipient   Destinataire prévu (email ou numéro) — inséré dans l'alerte
+     * @param isWhatsApp  true = alerte WhatsApp, false = alerte Email
+     * @param action      Action à exécuter
+     */
+    private void trySend(String label, String recipient, boolean isWhatsApp, Runnable action) {
         try {
             action.run();
         } catch (Exception e) {
             log.warn("[Notification] Échec envoi {} : {}", label, e.getMessage());
+            if (isWhatsApp) {
+                alertService.alertOnWhatsAppFailure(label, recipient, e);
+            } else {
+                alertService.alertOnEmailFailure(label, recipient, e);
+            }
         }
     }
 }

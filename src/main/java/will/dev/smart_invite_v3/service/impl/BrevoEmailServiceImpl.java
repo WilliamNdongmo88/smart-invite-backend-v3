@@ -346,6 +346,54 @@ public class BrevoEmailServiceImpl implements EmailService {
         sendEmail(toEmail, "Paiement validé via code " + referralCode, html, List.of());
     }
 
+    @Override
+    public void sendWhatsAppFailureAlert(String context, String recipient, String errorDetail) {
+        String safeDetail = errorDetail != null
+                ? errorDetail.replace("<", "&lt;").replace(">", "&gt;")
+                : "Détail non disponible";
+        String html = emailTemplateService.render(Map.of(
+                "subject", "⚠️ Échec envoi WhatsApp — Smart Invite",
+                "title",   "⚠️ Échec d'envoi WhatsApp",
+                "content", "Un message WhatsApp n'a <strong>pas pu être livré</strong> en production.<br/><br/>" +
+                           "<strong>Contexte :</strong> " + context + "<br/>" +
+                           "<strong>Destinataire prévu :</strong> <span style=\"color:#c9a84c;\">" + recipient + "</span><br/><br/>" +
+                           "<strong>Erreur technique :</strong><br/>" +
+                           "<blockquote style=\"border-left:3px solid #ef4444;padding-left:12px;color:#aaa;" +
+                           "font-family:monospace;font-size:0.8rem;\">" + safeDetail + "</blockquote>" +
+                           "<hr style=\"border:none;border-top:1px solid #2a2a2a;margin:1rem 0;\"/>" +
+                           "Vérifiez que le numéro possède un compte WhatsApp actif et que le service WhatsApp est connecté."
+        ));
+        try {
+            sendEmail(adminEmail, "⚠️ Échec WhatsApp — " + context, html, List.of());
+        } catch (Exception e) {
+            log.error("[Alert] Impossible d'envoyer l'alerte WhatsApp à l'admin : {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void sendEmailFailureAlert(String context, String recipient, String errorDetail) {
+        String safeDetail = errorDetail != null
+                ? errorDetail.replace("<", "&lt;").replace(">", "&gt;")
+                : "Détail non disponible";
+        String html = emailTemplateService.render(Map.of(
+                "subject", "⚠️ Échec envoi Email — Smart Invite",
+                "title",   "⚠️ Échec d'envoi Email",
+                "content", "Un email n'a <strong>pas pu être livré</strong> en production.<br/><br/>" +
+                           "<strong>Contexte :</strong> " + context + "<br/>" +
+                           "<strong>Destinataire prévu :</strong> <span style=\"color:#c9a84c;\">" + recipient + "</span><br/><br/>" +
+                           "<strong>Erreur technique :</strong><br/>" +
+                           "<blockquote style=\"border-left:3px solid #ef4444;padding-left:12px;color:#aaa;" +
+                           "font-family:monospace;font-size:0.8rem;\">" + safeDetail + "</blockquote>" +
+                           "<hr style=\"border:none;border-top:1px solid #2a2a2a;margin:1rem 0;\"/>" +
+                           "Vérifiez la validité de l'adresse email et la configuration Brevo."
+        ));
+        try {
+            sendEmail(adminEmail, "⚠️ Échec Email — " + context, html, List.of());
+        } catch (Exception e) {
+            log.error("[Alert] Impossible d'envoyer l'alerte Email à l'admin : {}", e.getMessage());
+        }
+    }
+
     private void sendEmail(String to, String subject, String htmlContent,
                            List<SendSmtpEmailAttachment> attachments) {
         try {
