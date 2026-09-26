@@ -20,5 +20,6 @@ public class UserNewsResponse {
     private String replyChannel;   // "WHATSAPP" | "EMAIL"
     private String replyContact;   // numéro WA ou email de réponse
     private Long   userId;         // null si visiteur anonyme
+    private Boolean isRead;        // true si l'admin a marqué comme lu
     private OffsetDateTime createdAt;
 }

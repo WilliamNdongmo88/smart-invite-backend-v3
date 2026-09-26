@@ -64,6 +64,14 @@ public class UserNews {
     @JoinColumn(name = "user_id")
     private User user;
 
+    /**
+     * Indique si l'admin a marqué ce message comme lu.
+     * Permet de décrémenter le compteur de non-lus dans l'interface.
+     */
+    @Builder.Default
+    @Column(name = "is_read", nullable = false)
+    private Boolean isRead = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 

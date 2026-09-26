@@ -225,6 +225,23 @@ public class AdminServiceImpl implements AdminService {
         }
     }
 
+    @Override
+    @Transactional
+    public UserNewsResponse markContactAsRead(Long contactId) {
+        UserNews contact = userNewsRepository.findById(contactId)
+                .orElseThrow(() -> new RuntimeException("Message introuvable"));
+        contact.setIsRead(true);
+        return toDto(userNewsRepository.save(contact));
+    }
+
+    @Override
+    @Transactional
+    public void deleteContact(Long contactId) {
+        UserNews contact = userNewsRepository.findById(contactId)
+                .orElseThrow(() -> new RuntimeException("Message introuvable"));
+        userNewsRepository.delete(contact);
+    }
+
     // ──────────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────────
@@ -239,6 +256,7 @@ public class AdminServiceImpl implements AdminService {
                 .replyChannel(un.getReplyChannel())
                 .replyContact(un.getReplyContact())
                 .userId(un.getUser() != null ? un.getUser().getId() : null)
+                .isRead(Boolean.TRUE.equals(un.getIsRead()))
                 .createdAt(un.getCreatedAt())
                 .build();
     }

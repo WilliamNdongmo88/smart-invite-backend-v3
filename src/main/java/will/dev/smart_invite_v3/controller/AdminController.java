@@ -91,4 +91,19 @@ public class AdminController {
         adminService.replyToContact(id, request);
         return ResponseEntity.ok(ApiResponse.success("Réponse envoyée"));
     }
+
+    @PatchMapping("/contacts/{id}/read")
+    @Operation(summary = "Marquer un message de contact comme lu")
+    public ResponseEntity<ApiResponse<UserNewsResponse>> markContactAsRead(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(
+                adminService.markContactAsRead(id),
+                "Message marqué comme lu"));
+    }
+
+    @DeleteMapping("/contacts/{id}")
+    @Operation(summary = "Supprimer définitivement un message de contact")
+    public ResponseEntity<ApiResponse<Void>> deleteContact(@PathVariable Long id) {
+        adminService.deleteContact(id);
+        return ResponseEntity.ok(ApiResponse.success("Message supprimé"));
+    }
 }

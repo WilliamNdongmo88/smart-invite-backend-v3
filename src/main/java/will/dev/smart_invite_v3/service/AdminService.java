@@ -27,4 +27,10 @@ public interface AdminService {
 
     /** Envoie une réponse à un message de contact via le canal choisi par l'utilisateur */
     void replyToContact(Long contactId, ContactReplyRequest request);
+
+    /** Marque un message de contact comme lu */
+    UserNewsResponse markContactAsRead(Long contactId);
+
+    /** Supprime définitivement un message de contact */
+    void deleteContact(Long contactId);
 }
