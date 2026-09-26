@@ -84,7 +84,21 @@ public interface EmailService {
      *                      commission à 24h est annoncée à la place du montant)
      * @param referralCode  code de recommandation utilisé
      */
-    void sendReferralPaymentNotification(String toEmail, String recipientName,
-                                         String organizerName, String eventTitle,
-                                         int quota, BigDecimal amount, String referralCode);
+    /**
+     * Notifie l'admin par email qu'un envoi WhatsApp a échoué silencieusement.
+     *
+     * @param context     Contexte lisible de l'action (ex: "notification bienvenue referral")
+     * @param recipient   Destinataire prévu (nom ou numéro)
+     * @param errorDetail Message d'erreur technique
+     */
+    void sendWhatsAppFailureAlert(String context, String recipient, String errorDetail);
+
+    /**
+     * Notifie l'admin par email qu'un envoi Email a échoué silencieusement.
+     *
+     * @param context     Contexte lisible de l'action
+     * @param recipient   Destinataire prévu (email)
+     * @param errorDetail Message d'erreur technique
+     */
+    void sendEmailFailureAlert(String context, String recipient, String errorDetail);
 }

@@ -27,9 +27,10 @@ public class ReferrerServiceImpl implements ReferrerService {
 
     private static final String CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-    private final ReferrerRepository referrerRepository;
-    private final EmailService        emailService;
-    private final WhatsAppService     whatsAppService;
+    private final ReferrerRepository      referrerRepository;
+    private final EmailService            emailService;
+    private final WhatsAppService         whatsAppService;
+    private final NotificationAlertService alertService;
 
     @Value("${app.admin.email}")
     private String adminEmail;
@@ -151,6 +152,9 @@ public class ReferrerServiceImpl implements ReferrerService {
             } catch (Exception e) {
                 log.warn("[Referrer] Échec notification email de bienvenue pour {} : {}",
                         referrer.getName(), e.getMessage());
+                alertService.alertOnEmailFailure(
+                        "notification email de bienvenue — referral " + referrer.getName(),
+                        referrer.getEmail(), e);
             }
         }
 
@@ -162,6 +166,9 @@ public class ReferrerServiceImpl implements ReferrerService {
             } catch (Exception e) {
                 log.warn("[Referrer] Échec notification WhatsApp de bienvenue pour {} : {}",
                         referrer.getName(), e.getMessage());
+                alertService.alertOnWhatsAppFailure(
+                        "notification WhatsApp de bienvenue — referral " + referrer.getName(),
+                        referrer.getPhone(), e);
             }
         }
     }
