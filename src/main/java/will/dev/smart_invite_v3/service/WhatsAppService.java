@@ -39,6 +39,16 @@ public interface WhatsAppService {
     void sendContactMessageToAdmin(String adminPhone, String senderName,
                                    String senderPhone, String message);
 
+    /**
+     * Notifie un nouveau recommandateur sur WhatsApp qu'il vient d'être ajouté
+     * sur Smart Invite, en lui communiquant son code de recommandation.
+     *
+     * @param phoneNumber   numéro WhatsApp du recommandateur
+     * @param referrerName  nom du recommandateur
+     * @param referralCode  code de recommandation généré
+     */
+    void sendReferrerWelcomeMessage(String phoneNumber, String referrerName, String referralCode);
+
 /**
      * Notifie (admin ou recommandateur) qu'un paiement lié à un code de
      * recommandation a été validé.

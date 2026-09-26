@@ -13,6 +13,8 @@ public interface ReferrerService {
 
     List<ReferrerResponse> findAll();
 
+    ReferrerResponse update(Long id, ReferrerRequest request);
+
     ReferrerResponse toggleActive(Long id);
 
     ReferralCheckResponse check(String code);

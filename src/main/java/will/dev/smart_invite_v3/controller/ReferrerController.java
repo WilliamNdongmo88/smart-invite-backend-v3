@@ -57,6 +57,19 @@ public class ReferrerController {
                 "Statut mis à jour"));
     }
 
+    @PutMapping("/admin/referrers/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "[ADMIN] Modifier les informations d'un recommandateur")
+    public ResponseEntity<ApiResponse<ReferrerResponse>> update(
+            @PathVariable Long id,
+            @Valid @RequestBody ReferrerRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                referrerService.update(id, request),
+                "Recommandateur mis à jour"));
+    }
+
     @GetMapping("/referrers/validate")
     @Operation(summary = "Vérifier un code de recommandation (public)",
             description = "Retourne valid=true si le code existe et est actif")

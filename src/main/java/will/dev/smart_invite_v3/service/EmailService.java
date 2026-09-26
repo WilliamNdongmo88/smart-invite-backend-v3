@@ -61,7 +61,17 @@ public interface EmailService {
      */
     void sendAdminReply(String toEmail, String senderName, String replyMessage);
 
-/**
+    /**
+     * Notifie un nouveau recommandateur qu'il vient d'être ajouté sur Smart Invite,
+     * en lui communiquant son code de recommandation.
+     *
+     * @param toEmail       email du recommandateur
+     * @param referrerName  nom du recommandateur
+     * @param referralCode  code de recommandation généré
+     */
+    void sendReferrerWelcomeNotification(String toEmail, String referrerName, String referralCode);
+
+    /**
      * Notifie (admin ou recommandateur) qu'un paiement lié à un code de
      * recommandation a été validé.
      *

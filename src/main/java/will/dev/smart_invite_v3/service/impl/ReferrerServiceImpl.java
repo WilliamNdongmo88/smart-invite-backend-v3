@@ -1,6 +1,8 @@
 package will.dev.smart_invite_v3.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import will.dev.smart_invite_v3.dto.referrer.ReferralCheckResponse;
@@ -11,11 +13,14 @@ import will.dev.smart_invite_v3.enums.NotificationMode;
 import will.dev.smart_invite_v3.enums.PaymentStatus;
 import will.dev.smart_invite_v3.exception.ReferralCodeException;
 import will.dev.smart_invite_v3.repository.ReferrerRepository;
+import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.ReferrerService;
+import will.dev.smart_invite_v3.service.WhatsAppService;
 
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReferrerServiceImpl implements ReferrerService {
@@ -23,6 +28,16 @@ public class ReferrerServiceImpl implements ReferrerService {
     private static final String CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
     private final ReferrerRepository referrerRepository;
+    private final EmailService        emailService;
+    private final WhatsAppService     whatsAppService;
+
+    @Value("${app.admin.email}")
+    private String adminEmail;
+
+    @Value("${app.admin.phone}")
+    private String adminPhone;
+
+    // ── Création ──────────────────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -32,11 +47,17 @@ public class ReferrerServiceImpl implements ReferrerService {
                 .phone(request.phone())
                 .email(request.email())
                 .code(generateUniqueCode())
-                .notificationMode(request.notificationMode() != null ? request.notificationMode() : NotificationMode.EMAIL)
+                .notificationMode(request.notificationMode() != null
+                        ? request.notificationMode()
+                        : NotificationMode.EMAIL)
                 .isActive(true)
                 .build();
-        return toResponse(referrerRepository.save(referrer));
+        Referrer saved = referrerRepository.save(referrer);
+        notifyNewReferrer(saved);
+        return toResponse(saved);
     }
+
+    // ── Lecture ───────────────────────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
@@ -46,6 +67,24 @@ public class ReferrerServiceImpl implements ReferrerService {
                 .toList();
     }
 
+    // ── Mise à jour ──────────────────────────────────────────────────────────
+
+    @Override
+    @Transactional
+    public ReferrerResponse update(Long id, ReferrerRequest request) {
+        Referrer referrer = referrerRepository.findById(id)
+                .orElseThrow(() -> new ReferralCodeException("Recommandateur introuvable"));
+        referrer.setName(request.name());
+        referrer.setPhone(request.phone());
+        referrer.setEmail(request.email());
+        if (request.notificationMode() != null) {
+            referrer.setNotificationMode(request.notificationMode());
+        }
+        return toResponse(referrerRepository.save(referrer));
+    }
+
+    // ── Toggle actif/inactif ──────────────────────────────────────────────────
+
     @Override
     @Transactional
     public ReferrerResponse toggleActive(Long id) {
@@ -54,6 +93,8 @@ public class ReferrerServiceImpl implements ReferrerService {
         referrer.setIsActive(!referrer.getIsActive());
         return toResponse(referrerRepository.save(referrer));
     }
+
+    // ── Validation publique ───────────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
@@ -79,6 +120,43 @@ public class ReferrerServiceImpl implements ReferrerService {
         }
         return referrer;
     }
+
+    // ── Notification de bienvenue ─────────────────────────────────────────────
+
+    /**
+     * Envoie une notification de bienvenue au nouveau recommandateur (Email / WhatsApp / les deux)
+     * en lui communiquant son code de recommandation.
+     * L'échec de la notification ne bloque pas la création du recommandateur.
+     */
+    private void notifyNewReferrer(Referrer referrer) {
+        NotificationMode mode = referrer.getNotificationMode() != null
+                ? referrer.getNotificationMode()
+                : NotificationMode.EMAIL;
+
+        if ((mode == NotificationMode.EMAIL || mode == NotificationMode.BOTH)
+                && referrer.getEmail() != null && !referrer.getEmail().isBlank()) {
+            try {
+                emailService.sendReferrerWelcomeNotification(
+                        referrer.getEmail(), referrer.getName(), referrer.getCode());
+            } catch (Exception e) {
+                log.warn("[Referrer] Échec notification email de bienvenue pour {} : {}",
+                        referrer.getName(), e.getMessage());
+            }
+        }
+
+        if ((mode == NotificationMode.WHATSAPP || mode == NotificationMode.BOTH)
+                && referrer.getPhone() != null && !referrer.getPhone().isBlank()) {
+            try {
+                whatsAppService.sendReferrerWelcomeMessage(
+                        referrer.getPhone(), referrer.getName(), referrer.getCode());
+            } catch (Exception e) {
+                log.warn("[Referrer] Échec notification WhatsApp de bienvenue pour {} : {}",
+                        referrer.getName(), e.getMessage());
+            }
+        }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private ReferrerResponse toResponse(Referrer referrer) {
         return new ReferrerResponse(

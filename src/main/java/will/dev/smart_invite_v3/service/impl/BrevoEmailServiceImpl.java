@@ -307,6 +307,26 @@ public class BrevoEmailServiceImpl implements EmailService {
     }
 
     @Override
+    public void sendReferrerWelcomeNotification(String toEmail, String referrerName, String referralCode) {
+        String html = emailTemplateService.render(Map.of(
+                "subject",  "Bienvenue sur Smart Invite — Votre code de recommandation",
+                "title",    "Vous êtes maintenant recommandateur Smart Invite ! 🎉",
+                "content",  "Bonjour <strong style=\"color:#c9a84c;\">" + referrerName + "</strong>,<br/><br/>" +
+                            "Vous venez d'être ajouté(e) en tant que <strong>recommandateur</strong> sur la plateforme " +
+                            "<strong style=\"color:#c9a84c;\">smart-invite</strong>.<br/><br/>" +
+                            "Votre code de recommandation exclusif est :<br/><br/>" +
+                            "<div style=\"text-align:center;margin:1rem 0;\">" +
+                            "<span style=\"font-size:1.4rem;font-weight:700;font-family:monospace;" +
+                            "background:#141414;color:#c9a84c;padding:0.5rem 1.25rem;border-radius:8px;" +
+                            "border:1px solid #2a2a2a;letter-spacing:0.08em;\">" + referralCode + "</span>" +
+                            "</div>" +
+                            "Partagez ce code à vos contacts lors de leur inscription sur smart-invite.com.<br/>" +
+                            "Chaque paiement validé avec votre code vous donnera droit à une commission."
+        ));
+        sendEmail(toEmail, "Bienvenue sur Smart Invite — Code " + referralCode, html, List.of());
+    }
+
+    @Override
     public void sendReferralPaymentNotification(String toEmail, String recipientName,
                                                 String organizerName, String eventTitle,
                                                 int quota, BigDecimal amount, String referralCode) {

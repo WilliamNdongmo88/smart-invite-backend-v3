@@ -263,6 +263,34 @@ public class WhatsAppServiceImpl implements WhatsAppService {
     }
 
     @Override
+    public void sendReferrerWelcomeMessage(String phoneNumber, String referrerName, String referralCode) {
+        String message = String.join("\n",
+            "╔═════════════════════╗",
+            "               ✉️ *SMART INVITE*",
+            "╚═════════════════════╝",
+            "",
+            "🎉 *Bienvenue, " + referrerName + " !*",
+            "",
+            "Vous venez d'être ajouté(e) en tant que",
+            "*recommandateur* sur la plateforme smart-invite.",
+            "",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "🎟️ *Votre code de recommandation :*",
+            "",
+            "  ➡️  *" + referralCode + "*",
+            "",
+            "Partagez ce code à vos contacts lors de",
+            "leur inscription sur smart-invite.com.",
+            "Chaque paiement validé avec votre code",
+            "vous donnera droit à une commission.",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "               🌐 smart-invite.com",
+            "━━━━━━━━━━━━━━━━━━━━━━"
+        );
+        send(phoneNumber, message);
+    }
+
+    @Override
     public void sendReferralPaymentMessage(String phoneNumber, String recipientName,
                                            String organizerName, String eventTitle,
                                            int quota, BigDecimal amount, String referralCode) {
