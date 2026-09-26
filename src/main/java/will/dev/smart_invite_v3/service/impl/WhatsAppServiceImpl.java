@@ -2,6 +2,7 @@ package will.dev.smart_invite_v3.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -11,6 +12,7 @@ import will.dev.smart_invite_v3.entity.ThankYouTemplate;
 import will.dev.smart_invite_v3.service.WhatsAppService;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -19,13 +21,24 @@ import java.util.Map;
 @Service
 public class WhatsAppServiceImpl implements WhatsAppService {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    /**
+     * Timeout connexion : 5s — évite de bloquer si le service WhatsApp est injoignable.
+     * Timeout lecture  : 10s — au-delà, on considère l'envoi échoué et on libère le thread.
+     */
+    private final RestTemplate restTemplate;
 
     @Value("${app.whatsapp.service-url:http://localhost:3001}")
     private String serviceUrl;
 
     @Value("${app.whatsapp.api-secret:smart-invite-whatsapp-secret}")
     private String apiSecret;
+
+    public WhatsAppServiceImpl(RestTemplateBuilder builder) {
+        this.restTemplate = builder
+                .connectTimeout(Duration.ofSeconds(5))
+                .readTimeout(Duration.ofSeconds(10))
+                .build();
+    }
 
     @Override
     public void sendRsvpInviteMessage(String phoneNumber, String guestName, String eventTitle,
