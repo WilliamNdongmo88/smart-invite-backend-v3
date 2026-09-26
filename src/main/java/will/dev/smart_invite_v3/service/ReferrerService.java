@@ -20,4 +20,6 @@ public interface ReferrerService {
     ReferralCheckResponse check(String code);
 
     Referrer getActiveByCode(String code);
+
+    void delete(Long id);
 }

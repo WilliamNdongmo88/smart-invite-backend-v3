@@ -121,6 +121,16 @@ public class ReferrerServiceImpl implements ReferrerService {
         return referrer;
     }
 
+    // ── Suppression ───────────────────────────────────────────────────
+
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        Referrer referrer = referrerRepository.findById(id)
+                .orElseThrow(() -> new ReferralCodeException("Recommandateur introuvable"));
+        referrerRepository.delete(referrer);
+    }
+
     // ── Notification de bienvenue ─────────────────────────────────────────────
 
     /**

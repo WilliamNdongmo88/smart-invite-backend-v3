@@ -70,6 +70,15 @@ public class ReferrerController {
                 "Recommandateur mis à jour"));
     }
 
+    @DeleteMapping("/admin/referrers/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "[ADMIN] Supprimer définitivement un recommandateur")
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
+        referrerService.delete(id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Recommandateur supprimé"));
+    }
+
     @GetMapping("/referrers/validate")
     @Operation(summary = "Vérifier un code de recommandation (public)",
             description = "Retourne valid=true si le code existe et est actif")
