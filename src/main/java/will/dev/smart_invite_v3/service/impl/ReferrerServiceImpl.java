@@ -135,9 +135,9 @@ public class ReferrerServiceImpl implements ReferrerService {
     // ── Notification de bienvenue ─────────────────────────────────────────────
 
     /**
-     * Envoie une notification de bienvenue au nouveau recommandateur (Email / WhatsApp / les deux)
-     * en lui communiquant son code de recommandation.
-     * L'échec de la notification ne bloque pas la création du recommandateur.
+     * Envoie une notification de bienvenue au nouveau recommandateur.
+     * Si la notification échoue, l'admin est alerté par email et une exception
+     * est propagée — ce qui déclenche le rollback de la transaction de création.
      */
     private void notifyNewReferrer(Referrer referrer) {
         NotificationMode mode = referrer.getNotificationMode() != null
@@ -155,6 +155,9 @@ public class ReferrerServiceImpl implements ReferrerService {
                 alertService.alertOnEmailFailure(
                         "notification email de bienvenue — referral " + referrer.getName(),
                         referrer.getEmail(), e);
+                throw new ReferralCodeException(
+                        "Le recommandateur a été créé mais l'email de notification n'a pas pu être envoyé " +
+                        "à " + referrer.getEmail() + ". Veuillez vérifier l'adresse et réessayer.");
             }
         }
 
@@ -169,6 +172,9 @@ public class ReferrerServiceImpl implements ReferrerService {
                 alertService.alertOnWhatsAppFailure(
                         "notification WhatsApp de bienvenue — referral " + referrer.getName(),
                         referrer.getPhone(), e);
+                throw new ReferralCodeException(
+                        "Impossible d'envoyer le message WhatsApp au " + referrer.getPhone() +
+                        ". Vérifiez que ce numéro possède un compte WhatsApp actif et réessayez.");
             }
         }
     }
