@@ -132,7 +132,7 @@ public class InvitationServiceImpl implements InvitationService {
     public PublicInvitationResponse getPublic(String token) {
         Invitation inv = invitationRepository.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Invitation introuvable"));
-        if (inv.getStatus() == InvitationStatus.REVOKED) {
+        if (inv.getStatus() == InvitationStatus.DECLINED) {
             throw new RuntimeException("Cette invitation a été révoquée");
         }
         return PublicInvitationResponse.from(inv);
@@ -171,7 +171,7 @@ public class InvitationServiceImpl implements InvitationService {
     public PublicInvitationResponse rsvp(String token, RsvpRequest request) {
         Invitation inv = invitationRepository.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Invitation introuvable"));
-        if (inv.getStatus() == InvitationStatus.REVOKED) {
+        if (inv.getStatus() == InvitationStatus.DECLINED) {
             throw new RuntimeException("Cette invitation a été révoquée");
         }
         Guest guest = inv.getGuest();
