@@ -2,17 +2,16 @@ package will.dev.smart_invite_v3.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import will.dev.smart_invite_v3.entity.ThankYouTemplate;
 import will.dev.smart_invite_v3.service.WhatsAppService;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,11 +32,11 @@ public class WhatsAppServiceImpl implements WhatsAppService {
     @Value("${app.whatsapp.api-secret:smart-invite-whatsapp-secret}")
     private String apiSecret;
 
-    public WhatsAppServiceImpl(RestTemplateBuilder builder) {
-        this.restTemplate = builder
-                .connectTimeout(Duration.ofSeconds(5))
-                .readTimeout(Duration.ofSeconds(10))
-                .build();
+    public WhatsAppServiceImpl() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5_000);  // 5s
+        factory.setReadTimeout(10_000);    // 10s
+        this.restTemplate = new RestTemplate(factory);
     }
 
     @Override
