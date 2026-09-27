@@ -58,7 +58,7 @@ public class InvitationServiceImpl implements InvitationService {
     @Value("${app.firebase.storage-bucket}")
     private String firebaseBucket;
 
-    @Value("${app.frontend.url:http://localhost:4200}")
+    @Value("${app.env.apiUrl}")
     private String frontendUrl;
 
     @Value("${spring.profiles.active:dev}")
