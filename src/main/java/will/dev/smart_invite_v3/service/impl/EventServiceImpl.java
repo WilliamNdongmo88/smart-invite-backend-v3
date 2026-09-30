@@ -18,10 +18,12 @@ import will.dev.smart_invite_v3.entity.Event;
 import will.dev.smart_invite_v3.entity.InvitationCard;
 import will.dev.smart_invite_v3.entity.ThankYouTemplate;
 import will.dev.smart_invite_v3.entity.User;
+import will.dev.smart_invite_v3.enums.RsvpStatus;
 import will.dev.smart_invite_v3.exception.EventAccessDeniedException;
 import will.dev.smart_invite_v3.exception.EventNotFoundException;
 import will.dev.smart_invite_v3.exception.UserNotFoundException;
 import will.dev.smart_invite_v3.repository.EventRepository;
+import will.dev.smart_invite_v3.repository.GuestRepository;
 import will.dev.smart_invite_v3.repository.UserRepository;
 import will.dev.smart_invite_v3.service.EventService;
 import will.dev.smart_invite_v3.service.FirebaseStorageService;
@@ -36,6 +38,7 @@ public class EventServiceImpl implements EventService {
 
     private final EventRepository      eventRepository;
     private final UserRepository       userRepository;
+    private final GuestRepository      guestRepository;
     private final RedisService         redisService;
     private final EventScheduleService eventScheduleService;
     private final FirebaseStorageService firebaseStorage;
@@ -205,7 +208,10 @@ public class EventServiceImpl implements EventService {
     @Override
     public EventStatsResponse getStats(Long id, Long organizerId) {
         Event event = resolveOwned(id, organizerId);
-        long totalGuests = 0, confirmed = 0, pending = 0, declined = 0;
+        long totalGuests = guestRepository.countByEventId(event.getId());
+        long confirmed   = guestRepository.countByEventIdAndRsvpStatus(event.getId(), RsvpStatus.CONFIRMED);
+        long pending     = guestRepository.countByEventIdAndRsvpStatus(event.getId(), RsvpStatus.PENDING);
+        long declined    = guestRepository.countByEventIdAndRsvpStatus(event.getId(), RsvpStatus.DECLINED);
         double occupancyRate = event.getMaxGuests() > 0
                 ? (double) totalGuests / event.getMaxGuests() * 100 : 0;
         return new EventStatsResponse(event.getId(), event.getTitle(),

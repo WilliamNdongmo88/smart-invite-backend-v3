@@ -27,9 +27,13 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RateLimitingFilter rateLimitingFilter;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
+    private final org.springframework.core.env.Environment env;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+        boolean isDev = java.util.Arrays.asList(env.getActiveProfiles()).contains("dev")
+                || env.getActiveProfiles().length == 0;
 
         http
 
@@ -45,54 +49,56 @@ public class SecurityConfig {
                 )
 
                 // Autorisations
-                .authorizeHttpRequests(auth -> auth
+                .authorizeHttpRequests(auth -> {
 
-                        // Authentification
-                        .requestMatchers("/api/auth/**").permitAll()
+                    // Authentification
+                    auth.requestMatchers("/api/auth/**").permitAll();
 
-                        // Swagger
-                        .requestMatchers(
+                    // Swagger (uniquement en dev / local)
+                    if (isDev) {
+                        auth.requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
-                        ).permitAll()
+                        ).permitAll();
+                    }
 
-                        // Ressources publiques
-                        .requestMatchers(
-                                "/",
-                                "/favicon.ico",
-                                "/error"
-                        ).permitAll()
+                    // Ressources publiques
+                    auth.requestMatchers(
+                            "/",
+                            "/favicon.ico",
+                            "/error"
+                    ).permitAll();
 
-                        // OPTIONS (Angular)
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    // OPTIONS (Angular)
+                    auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
 
-                        // Invitations publiques (sans auth)
-                        .requestMatchers(HttpMethod.GET,  "/api/invitations/*").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/invitations/*/rsvp").permitAll()
+                    // Invitations publiques (sans auth)
+                    auth.requestMatchers(HttpMethod.GET,  "/api/invitations/*").permitAll();
+                    auth.requestMatchers(HttpMethod.POST, "/api/invitations/*/rsvp").permitAll();
 
-                        // Liens d'auto-inscription publics (sans auth)
-                        .requestMatchers(HttpMethod.GET,  "/api/link/preview/*").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/link/join/*").permitAll()
+                    // Liens d'auto-inscription publics (sans auth)
+                    auth.requestMatchers(HttpMethod.GET,  "/api/link/preview/*").permitAll();
+                    auth.requestMatchers(HttpMethod.POST, "/api/link/join/*").permitAll();
 
-                        // Vue publique d'un événement (mode preview invité — sans auth)
-                        .requestMatchers(HttpMethod.GET,  "/api/events/*/public").permitAll()
+                    // Vue publique d'un événement (mode preview invité — sans auth)
+                    auth.requestMatchers(HttpMethod.GET,  "/api/events/*/public").permitAll();
 
-                        // Formulaire de contact public (visiteur anonyme ou connecté)
-                        .requestMatchers(HttpMethod.POST, "/api/contact").permitAll()
+                    // Formulaire de contact public (visiteur anonyme ou connecté)
+                    auth.requestMatchers(HttpMethod.POST, "/api/contact").permitAll();
 
-                        // Tracking anonyme des visiteurs (sans auth)
-                        .requestMatchers(HttpMethod.POST, "/api/track/**").permitAll()
+                    // Tracking anonyme des visiteurs (sans auth)
+                    auth.requestMatchers(HttpMethod.POST, "/api/track/**").permitAll();
 
-                        // Validation publique d'un code de recommandation (sans auth)
-                        .requestMatchers(HttpMethod.GET,  "/api/referrers/validate").permitAll()
+                    // Validation publique d'un code de recommandation (sans auth)
+                    auth.requestMatchers(HttpMethod.GET,  "/api/referrers/validate").permitAll();
 
-                        // Admin
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                    // Admin
+                    auth.requestMatchers("/api/admin/**").hasRole("ADMIN");
 
-                        // Tout le reste nécessite un JWT
-                        .anyRequest().authenticated()
-                )
+                    // Tout le reste nécessite un JWT
+                    auth.anyRequest().authenticated();
+                })
                 .exceptionHandling(exception ->
                         exception.authenticationEntryPoint(
                                 authenticationEntryPoint

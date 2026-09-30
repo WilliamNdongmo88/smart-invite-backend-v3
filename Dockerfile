@@ -85,7 +85,9 @@ ENV WHATSAPP_AUTH_DIR=/app/whatsapp-service/.wwebjs_auth
 RUN mkdir -p /tmp/.chromium-shm
 
 WORKDIR /app
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
-EXPOSE 8010
+EXPOSE 8010 3001
 
-CMD ["java", "-jar", "app.jar"]
+CMD ["/app/entrypoint.sh"]

@@ -32,6 +32,7 @@ build/
 ### VS Code ###
 .vscode/
 .env
+**/.env
 
 # Fichiers sensibles
 backend/src/main/resources/.env

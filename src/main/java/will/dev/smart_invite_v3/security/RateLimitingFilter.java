@@ -35,13 +35,11 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         // Appliquer le rate limit uniquement sur les endpoints API
         if (!path.startsWith("/api/")) return true;
 
-        // Exclure localhost / 127.0.0.1 (développement)
-        String ip = getClientIp(request);
-        return "127.0.0.1".equals(ip)
-                || "0:0:0:0:0:0:0:1".equals(ip)
-                || "::1".equals(ip)
-                || ip.startsWith("192.168.")
-                || ip.startsWith("10.");
+        // Exclure uniquement le localhost réel (développement local)
+        String remote = request.getRemoteAddr();
+        return "127.0.0.1".equals(remote)
+                || "0:0:0:0:0:0:0:1".equals(remote)
+                || "::1".equals(remote);
     }
 
     @Override
@@ -49,72 +47,63 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain
-
     ) throws ServletException, IOException {
 
-        /*
-         * Récupération IP client
-         */
-        String clientIp =
-                getClientIp(request);
-
-
+        String path = request.getRequestURI();
+        String clientIp = getClientIp(request);
 
         /*
-         * Clé Redis
+         * Catégorisation du bucket et limite par endpoint
          */
-        String key = SecurityConstants.REDIS_RATE_LIMIT_PREFIX + clientIp;
+        String bucket = "default";
+        int maxRequests = SecurityConstants.MAX_DEFAULT_REQUESTS_PER_MINUTE;
+
+        if (path.startsWith("/api/auth/")) {
+            bucket = "auth";
+            maxRequests = SecurityConstants.MAX_AUTH_REQUESTS_PER_MINUTE;
+        } else if (path.startsWith("/api/contact")) {
+            bucket = "contact";
+            maxRequests = SecurityConstants.MAX_CONTACT_REQUESTS_PER_MINUTE;
+        }
+
+        /*
+         * Clé Redis partitionnée par bucket et IP
+         */
+        String key = SecurityConstants.REDIS_RATE_LIMIT_PREFIX + bucket + ":" + clientIp;
 
         /*
          * Incrément compteur
          */
         Long requests = redisService.increment(key);
 
-
         /*
-         * Première requête :
-         * création expiration 60 secondes
+         * Première requête : création expiration 60 secondes
          */
         if (requests != null && requests == 1) {
-
             redisService.expire(
                     key,
                     Duration.ofSeconds(SecurityConstants.RATE_LIMIT_WINDOW)
             );
-
         }
-
 
         /*
          * Dépassement limite
          */
-        if (requests != null && requests > SecurityConstants.MAX_REQUESTS_PER_MINUTE) {
-
-            response.setStatus(
-                    HttpStatus.TOO_MANY_REQUESTS.value()
-            );
-
+        if (requests != null && requests > maxRequests) {
+            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType("application/json");
-
-            response.getWriter()
-                    .write(
-                            """
-                            {
-                              "error": "Too many requests",
-                              "message": "Rate limit exceeded"
-                            }
-                            """
-                    );
-
+            response.getWriter().write(
+                    """
+                    {
+                      "error": "Too many requests",
+                      "message": "Rate limit exceeded"
+                    }
+                    """
+            );
             return;
-
         }
 
-        filterChain.doFilter(
-                request,
-                response
-        );
-
+        filterChain.doFilter(request, response);
     }
 
     /**
