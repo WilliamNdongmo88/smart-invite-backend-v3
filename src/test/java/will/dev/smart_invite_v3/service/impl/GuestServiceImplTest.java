@@ -22,6 +22,7 @@ import will.dev.smart_invite_v3.repository.InvitationRepository;
 import will.dev.smart_invite_v3.repository.PaymentRepository;
 import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.WhatsAppService;
+import will.dev.smart_invite_v3.component.EventOwnershipValidator;
 
 import java.util.List;
 import java.util.Optional;
@@ -51,6 +52,9 @@ class GuestServiceImplTest {
 
     @Mock
     private WhatsAppService whatsAppService;
+
+    @Mock
+    private EventOwnershipValidator ownershipValidator;
 
     @InjectMocks
     private GuestServiceImpl guestService;
@@ -124,7 +128,7 @@ class GuestServiceImplTest {
 
         assertThatThrownBy(() -> guestService.update(999L, request, 1L))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Invité introuvable");
+                .hasMessageContaining("introuvable");
     }
 
     @Test
@@ -147,14 +151,13 @@ class GuestServiceImplTest {
         guest2.setId(101L);
         guest2.setEvent(event);
 
-        when(guestRepository.findById(100L)).thenReturn(Optional.of(guest));
-        when(guestRepository.findById(101L)).thenReturn(Optional.of(guest2));
+        when(guestRepository.findAllById(List.of(100L, 101L))).thenReturn(List.of(guest, guest2));
 
         BulkDeleteRequest request = new BulkDeleteRequest(List.of(100L, 101L));
 
         guestService.bulkDelete(request, 1L);
 
-        verify(guestRepository).delete(guest);
-        verify(guestRepository).delete(guest2);
+        verify(invitationRepository).deleteAllByGuestIdIn(List.of(100L, 101L));
+        verify(guestRepository).deleteAllById(List.of(100L, 101L));
     }
 }

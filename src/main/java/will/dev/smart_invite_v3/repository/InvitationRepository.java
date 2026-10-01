@@ -10,5 +10,7 @@ public interface InvitationRepository extends JpaRepository<Invitation, Long> {
     Optional<Invitation> findByToken(String token);
     Optional<Invitation> findByGuestId(Long guestId);
     List<Invitation> findAllByGuestEventId(Long eventId);
+    org.springframework.data.domain.Page<Invitation> findAllByGuestEventId(Long eventId, org.springframework.data.domain.Pageable pageable);
     boolean existsByGuestId(Long guestId);
+    void deleteAllByGuestIdIn(List<Long> guestIds);
 }

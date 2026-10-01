@@ -10,6 +10,7 @@ import java.util.List;
 public interface AdminService {
 
     List<OrganizerSummaryResponse> getAllOrganizers();
+    org.springframework.data.domain.Page<OrganizerSummaryResponse> getAllOrganizers(org.springframework.data.domain.Pageable pageable);
 
     /** Détail complet d'un événement (sans restriction propriétaire) */
     AdminEventDetailResponse getEventDetail(Long eventId);

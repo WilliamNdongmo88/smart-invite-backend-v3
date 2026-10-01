@@ -12,7 +12,7 @@ import will.dev.smart_invite_v3.service.WhatsAppService;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class NotificationDispatcher {
+public class NotificationDispatcher implements will.dev.smart_invite_v3.service.NotificationDispatcherPort {
 
     private final EmailService             emailService;
     private final WhatsAppService          whatsAppService;

@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
  * la bibliothèque ua-parser2 (Java) ou yauaa.
  */
 @Service
-public class UserAgentParserService {
+public class UserAgentParserService implements will.dev.smart_invite_v3.service.UserAgentParserServicePort {
 
     public record ParsedUA(String device, String os, String browser) {}
 

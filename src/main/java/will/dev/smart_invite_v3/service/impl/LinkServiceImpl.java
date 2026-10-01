@@ -14,7 +14,6 @@ import will.dev.smart_invite_v3.dto.link.response.LinkResponse;
 import will.dev.smart_invite_v3.entity.Event;
 import will.dev.smart_invite_v3.entity.Link;
 import will.dev.smart_invite_v3.exception.EventAccessDeniedException;
-import will.dev.smart_invite_v3.exception.EventNotFoundException;
 import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.LinkRepository;
 import will.dev.smart_invite_v3.repository.PaymentRepository;
@@ -23,6 +22,8 @@ import will.dev.smart_invite_v3.service.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+
+import will.dev.smart_invite_v3.component.EventOwnershipValidator;
 
 @Slf4j
 @Service
@@ -38,6 +39,7 @@ public class LinkServiceImpl implements LinkService {
     private final NotificationDispatcher notificationDispatcher;
     private final PaymentRepository paymentRepository;
     private final FirebaseStorageService firebaseStorage;
+    private final EventOwnershipValidator ownershipValidator;
 
     @Value("${app.env.apiUrl}")
     private String apiUrl;
@@ -156,10 +158,7 @@ public class LinkServiceImpl implements LinkService {
     // ---- Helpers ----
 
     private Event resolveOwned(Long eventId, Long organizerId) {
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EventNotFoundException(eventId));
-        if (!event.getOrganizer().getId().equals(organizerId)) throw new EventAccessDeniedException();
-        return event;
+        return ownershipValidator.resolveOwned(eventId, organizerId);
     }
 
     private Link resolveOwnedLink(Long linkId, Long organizerId) {

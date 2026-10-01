@@ -18,7 +18,7 @@ import will.dev.smart_invite_v3.service.EmailService;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class NotificationAlertService {
+public class NotificationAlertService implements will.dev.smart_invite_v3.service.NotificationAlertServicePort {
 
     private final EmailService emailService;
 

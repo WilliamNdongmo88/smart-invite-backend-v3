@@ -16,5 +16,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 
     List<User> findAllByRoleOrderByCreatedAtDesc(UserRole role);
+    org.springframework.data.domain.Page<User> findAllByRoleOrderByCreatedAtDesc(UserRole role, org.springframework.data.domain.Pageable pageable);
 
 }

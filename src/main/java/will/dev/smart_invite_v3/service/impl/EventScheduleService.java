@@ -17,7 +17,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class EventScheduleService {
+public class EventScheduleService implements will.dev.smart_invite_v3.service.EventScheduleServicePort {
 
     private final EventRepository         eventRepository;
     private final EventScheduleRepository eventScheduleRepository;

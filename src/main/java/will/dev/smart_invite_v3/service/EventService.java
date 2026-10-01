@@ -14,6 +14,7 @@ public interface EventService {
     EventResponse create(EventPayloadRequest request, Long organizerId);
 
     List<EventResponse> findAllByOrganizer(Long organizerId);
+    org.springframework.data.domain.Page<EventResponse> findAllByOrganizer(Long organizerId, org.springframework.data.domain.Pageable pageable);
 
     EventResponse findById(Long id, Long organizerId);
 

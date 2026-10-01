@@ -27,6 +27,9 @@ public interface InvitationService {
     /** Liste des invitations d'un event */
     List<InvitationResponse> listByEvent(Long eventId, Long organizerId);
 
+    /** Liste paginée des invitations d'un event */
+    org.springframework.data.domain.Page<InvitationResponse> listByEvent(Long eventId, org.springframework.data.domain.Pageable pageable, Long organizerId);
+
     /** RSVP invité */
     PublicInvitationResponse rsvp(String token, RsvpRequest request);
 

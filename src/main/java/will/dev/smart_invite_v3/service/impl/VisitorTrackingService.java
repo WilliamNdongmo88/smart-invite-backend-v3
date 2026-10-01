@@ -29,7 +29,7 @@ import java.time.LocalDateTime;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class VisitorTrackingService {
+public class VisitorTrackingService implements will.dev.smart_invite_v3.service.VisitorTrackingServicePort {
 
     private static final int INACTIVE_TIMEOUT_MINUTES = 30;
 

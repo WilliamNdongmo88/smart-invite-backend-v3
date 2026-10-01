@@ -22,7 +22,7 @@ import will.dev.smart_invite_v3.service.WhatsAppService;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ContactNotificationSender {
+public class ContactNotificationSender implements will.dev.smart_invite_v3.service.ContactNotificationSenderPort {
 
     private final WhatsAppService          whatsAppService;
     private final EmailService             emailService;

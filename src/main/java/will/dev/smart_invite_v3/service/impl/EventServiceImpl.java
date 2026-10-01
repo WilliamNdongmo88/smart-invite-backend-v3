@@ -31,22 +31,26 @@ import will.dev.smart_invite_v3.service.RedisService;
 
 import java.util.List;
 
+import will.dev.smart_invite_v3.component.EventOwnershipValidator;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class EventServiceImpl implements EventService {
 
-    private final EventRepository      eventRepository;
-    private final UserRepository       userRepository;
-    private final GuestRepository      guestRepository;
-    private final RedisService         redisService;
-    private final EventScheduleService eventScheduleService;
-    private final FirebaseStorageService firebaseStorage;
+    private final EventRepository         eventRepository;
+    private final UserRepository          userRepository;
+    private final GuestRepository         guestRepository;
+    private final RedisService            redisService;
+    private final EventScheduleService    eventScheduleService;
+    private final FirebaseStorageService  firebaseStorage;
+    private final EventOwnershipValidator ownershipValidator;
+
 
     @Value("${spring.profiles.active:dev}")
     private String activeProfile;
 
-    // Valeurs par défaut — utilisées quand aucun template custom n'est défini
+    // Valeurs par dÃ©faut â€” utilisÃ©es quand aucun template custom n'est dÃ©fini
     static final String DEFAULT_ACCROCHE    = ThankYouTemplate.DEFAULT_ACCROCHE;
     static final String DEFAULT_CORPS_1     = ThankYouTemplate.DEFAULT_CORPS_1;
     static final String DEFAULT_CORPS_2     = ThankYouTemplate.DEFAULT_CORPS_2;
@@ -76,7 +80,7 @@ public class EventServiceImpl implements EventService {
 
         applyContentPayload(event, request);
 
-        // Carte d'invitation associée
+        // Carte d'invitation associÃ©e
         InvitationCard card = InvitationCard.builder()
                 .event(event)
                 .title(request.extractTitle())
@@ -101,9 +105,16 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    public org.springframework.data.domain.Page<EventResponse> findAllByOrganizer(Long organizerId, org.springframework.data.domain.Pageable pageable) {
+        return eventRepository
+                .findAllByOrganizerIdOrderByCreatedAtDesc(organizerId, pageable)
+                .map(EventResponse::from);
+    }
+
+    @Override
     @Cacheable(cacheNames = CacheNames.EVENTS, key = "#id")
     public EventResponse findById(Long id, Long organizerId) {
-        return EventResponse.from(resolveOwned(id, organizerId));
+        return EventResponse.from(ownershipValidator.resolveOwned(id, organizerId));
     }
 
     @Override
@@ -112,7 +123,7 @@ public class EventServiceImpl implements EventService {
             @CacheEvict(cacheNames = CacheNames.EVENTS, key = "#id")
     })
     public EventResponse update(Long id, EventPayloadRequest request, Long organizerId) {
-        Event event = resolveOwned(id, organizerId);
+        Event event = ownershipValidator.resolveOwned(id, organizerId);
 
         event.setTitle(request.extractTitle());
         event.setDescription(request.extractDescription());
@@ -124,8 +135,8 @@ public class EventServiceImpl implements EventService {
         event.setDateLabel(request.extractDateLabel());
         event.setVenueName(request.extractVenueName());
         event.setVenueCity(request.extractVenueCity());
-        // couplePhotoUrl est géré exclusivement via uploadCouplePhoto() et updateEventPhotoByToken()
-        // — jamais depuis un payload de contenu, pour ne pas écraser la photo uploadée par les invités.
+        // couplePhotoUrl est gÃ©rÃ© exclusivement via uploadCouplePhoto() et updateEventPhotoByToken()
+        // â€” jamais depuis un payload de contenu, pour ne pas Ã©craser la photo uploadÃ©e par les invitÃ©s.
 
         applyContentPayload(event, request);
 
@@ -152,11 +163,11 @@ public class EventServiceImpl implements EventService {
     }
 
     /**
-     * Extrait le nombre de jours du programme depuis le contenu JSON de l'événement.
+     * Extrait le nombre de jours du programme depuis le contenu JSON de l'Ã©vÃ©nement.
      *
-     * Pour un mariage avec 2 jours dans program.days  → retourne 2
-     * Pour les autres types d'événements              → retourne 1 (valeur par défaut)
-     * Si le contenu est absent ou le programme vide   → retourne 1
+     * Pour un mariage avec 2 jours dans program.days  â†’ retourne 2
+     * Pour les autres types d'Ã©vÃ©nements              â†’ retourne 1 (valeur par dÃ©faut)
+     * Si le contenu est absent ou le programme vide   â†’ retourne 1
      */
     private int extractNumberOfDays(Event event) {
         if (event.getWeddingDetailsContent() != null) {
@@ -165,8 +176,8 @@ public class EventServiceImpl implements EventService {
                 return program.getDays().size();
             }
         }
-        // Pour les autres types (conférence, gala, cérémonie), on garde 1 jour par défaut
-        // On pourra étendre ici si ces types gagnent aussi un programme multi-jours
+        // Pour les autres types (confÃ©rence, gala, cÃ©rÃ©monie), on garde 1 jour par dÃ©faut
+        // On pourra Ã©tendre ici si ces types gagnent aussi un programme multi-jours
         return 1;
     }
 
@@ -176,7 +187,7 @@ public class EventServiceImpl implements EventService {
             @CacheEvict(cacheNames = CacheNames.EVENTS, key = "#id")
     })
     public void delete(Long id, Long organizerId) {
-        Event event = resolveOwned(id, organizerId);
+        Event event = ownershipValidator.resolveOwned(id, organizerId);
         redisService.delete(CacheKeys.eventStats(id));
         eventRepository.delete(event);
     }
@@ -185,7 +196,7 @@ public class EventServiceImpl implements EventService {
     @Transactional
     @CacheEvict(cacheNames = CacheNames.EVENTS, key = "#id")
     public String uploadCouplePhoto(Long id, MultipartFile file, Long organizerId) {
-        Event event = resolveOwned(id, organizerId);
+        Event event = ownershipValidator.resolveOwned(id, organizerId);
         String url = firebaseStorage.upload(file, activeProfile + "/events/photos");
         event.setCouplePhotoUrl(url);
         eventRepository.save(event);
@@ -199,7 +210,7 @@ public class EventServiceImpl implements EventService {
         }
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
-            throw new IllegalArgumentException("Seuls les fichiers image sont acceptés (JPG, PNG, WEBP, GIF)");
+            throw new IllegalArgumentException("Seuls les fichiers image sont acceptÃ©s (JPG, PNG, WEBP, GIF)");
         }
         String cleanFolder = (folder != null && !folder.isBlank()) ? folder.trim() : "content";
         return firebaseStorage.upload(file, activeProfile + "/events/" + cleanFolder);
@@ -207,7 +218,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public EventStatsResponse getStats(Long id, Long organizerId) {
-        Event event = resolveOwned(id, organizerId);
+        Event event = ownershipValidator.resolveOwned(id, organizerId);
         long totalGuests = guestRepository.countByEventId(event.getId());
         long confirmed   = guestRepository.countByEventIdAndRsvpStatus(event.getId(), RsvpStatus.CONFIRMED);
         long pending     = guestRepository.countByEventIdAndRsvpStatus(event.getId(), RsvpStatus.PENDING);
@@ -220,12 +231,12 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public ThankYouTemplateResponse getThankYouTemplate(Long id, Long organizerId) {
-        Event event = resolveOwned(id, organizerId);
+        Event event = ownershipValidator.resolveOwned(id, organizerId);
         ThankYouTemplate t = event.getThankYouTemplate();
         boolean isCustom = t != null;
         return new ThankYouTemplateResponse(
                 isCustom ? t.getAccroche()    : DEFAULT_ACCROCHE,
-                "Cher(e) *{guestName}*,",     // fixe — le système injecte le vrai nom
+                "Cher(e) *{guestName}*,",     // fixe â€” le systÃ¨me injecte le vrai nom
                 isCustom ? t.getCorpsLigne1() : DEFAULT_CORPS_1 + " " + event.getType().invitationPrefix(),
                 isCustom ? t.getCorpsLigne2() : DEFAULT_CORPS_2,
                 isCustom ? t.getConclusion()  : DEFAULT_CONCLUSION,
@@ -237,8 +248,8 @@ public class EventServiceImpl implements EventService {
     @Transactional
     @CacheEvict(cacheNames = CacheNames.EVENTS, key = "#id")
     public EventResponse updateThankYouMessage(Long id, ThankYouMessageRequest request, Long organizerId) {
-        Event event = resolveOwned(id, organizerId);
-        // null sur tous les champs = reset au template par défaut
+        Event event = ownershipValidator.resolveOwned(id, organizerId);
+        // null sur tous les champs = reset au template par dÃ©faut
         if (request.accroche() == null && request.corpsLigne1() == null
                 && request.corpsLigne2() == null && request.conclusion() == null) {
             event.setThankYouTemplate(null);
@@ -253,12 +264,5 @@ public class EventServiceImpl implements EventService {
         return EventResponse.from(eventRepository.save(event));
     }
 
-    private Event resolveOwned(Long eventId, Long organizerId) {
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EventNotFoundException(eventId));
-        if (!event.getOrganizer().getId().equals(organizerId)) {
-            throw new EventAccessDeniedException();
-        }
-        return event;
-    }
 }
+

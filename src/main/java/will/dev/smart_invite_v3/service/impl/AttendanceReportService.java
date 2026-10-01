@@ -40,7 +40,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AttendanceReportService {
+public class AttendanceReportService implements will.dev.smart_invite_v3.service.AttendanceReportServicePort {
 
     private final EventRepository       eventRepository;
     private final GuestRepository        guestRepository;

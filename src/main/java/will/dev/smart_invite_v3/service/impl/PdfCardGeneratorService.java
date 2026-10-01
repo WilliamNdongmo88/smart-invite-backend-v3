@@ -33,7 +33,7 @@ import java.util.Locale;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PdfCardGeneratorService {
+public class PdfCardGeneratorService implements will.dev.smart_invite_v3.service.PdfCardGeneratorServicePort {
 
     private final FirebaseStorageService firebaseStorage;
 

@@ -19,7 +19,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ThankYouJobService {
+public class ThankYouJobService implements will.dev.smart_invite_v3.service.ThankYouJobServicePort {
 
     private final EventRepository eventRepository;
     private final GuestRepository guestRepository;

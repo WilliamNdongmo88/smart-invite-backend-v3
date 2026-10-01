@@ -20,7 +20,7 @@ import java.time.Duration;
  */
 @Slf4j
 @Service
-public class GeoIpService {
+public class GeoIpService implements will.dev.smart_invite_v3.service.GeoIpServicePort {
 
     private static final String API_URL = "http://ip-api.com/json/%s?fields=status,country,city,regionName,timezone&lang=fr";
 

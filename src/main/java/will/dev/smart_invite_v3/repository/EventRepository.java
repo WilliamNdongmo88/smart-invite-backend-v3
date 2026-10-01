@@ -9,6 +9,7 @@ import java.util.Optional;
 public interface EventRepository extends JpaRepository<Event, Long> {
 
     List<Event> findAllByOrganizerIdOrderByCreatedAtDesc(Long organizerId);
+    org.springframework.data.domain.Page<Event> findAllByOrganizerIdOrderByCreatedAtDesc(Long organizerId, org.springframework.data.domain.Pageable pageable);
 
     Optional<Event> findByIdAndOrganizerId(Long id, Long organizerId);
 

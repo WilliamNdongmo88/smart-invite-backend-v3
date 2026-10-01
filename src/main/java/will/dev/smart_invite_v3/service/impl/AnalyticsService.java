@@ -24,7 +24,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-public class AnalyticsService {
+public class AnalyticsService implements will.dev.smart_invite_v3.service.AnalyticsServicePort {
 
     @PersistenceContext
     private EntityManager em;

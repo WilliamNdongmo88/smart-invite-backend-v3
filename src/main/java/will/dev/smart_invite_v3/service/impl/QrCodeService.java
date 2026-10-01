@@ -24,7 +24,7 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class QrCodeService {
+public class QrCodeService implements will.dev.smart_invite_v3.service.QrCodeServicePort {
 
     private final FirebaseStorageService firebaseStorage;
 

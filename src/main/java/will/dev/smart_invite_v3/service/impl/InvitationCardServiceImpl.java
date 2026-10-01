@@ -17,6 +17,7 @@ import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.InvitationCardRepository;
 import will.dev.smart_invite_v3.service.FirebaseStorageService;
 import will.dev.smart_invite_v3.service.InvitationCardService;
+import will.dev.smart_invite_v3.component.EventOwnershipValidator;
 
 import java.io.IOException;
 
@@ -29,6 +30,8 @@ public class InvitationCardServiceImpl implements InvitationCardService {
     private final InvitationCardRepository cardRepository;
     private final PdfCardGeneratorService  pdfGenerator;
     private final FirebaseStorageService   firebaseStorage;
+    private final EventOwnershipValidator  ownershipValidator;
+
 
     @Value("${spring.profiles.active}")
     private String path;
@@ -39,7 +42,7 @@ public class InvitationCardServiceImpl implements InvitationCardService {
     @Override
     @Transactional
     public CardResponse saveOrUpdate(Long eventId, InvitationNoteRequest request, Long organizerId) {
-        Event event = resolveOwned(eventId, organizerId);
+        Event event = ownershipValidator.resolveOwned(eventId, organizerId);
 
         InvitationCard card = cardRepository.findByEventId(eventId)
                 .orElseGet(() -> InvitationCard.builder().event(event).build());
@@ -51,7 +54,7 @@ public class InvitationCardServiceImpl implements InvitationCardService {
     @Override
     @Transactional
     public EventWithCardResponse getCard(Long eventId, Long organizerId) {
-        Event event = resolveOwned(eventId, organizerId);
+        Event event = ownershipValidator.resolveOwned(eventId, organizerId);
         InvitationCard card = cardRepository.findByEventId(eventId).orElse(null);
         CardResponse cardResponse = card != null
                 ? CardResponse.from(card, eventId)
@@ -62,18 +65,18 @@ public class InvitationCardServiceImpl implements InvitationCardService {
     @Override
     @Transactional
     public byte[] generatePdf(Long eventId, Long organizerId) {
-        Event event = resolveOwned(eventId, organizerId);
+        Event event = ownershipValidator.resolveOwned(eventId, organizerId);
         InvitationCard card = cardRepository.findByEventId(eventId).orElse(null);
 
-        // MARIAGE → la page WeddingDetails gère l'invitation de façon dédiée.
+        // MARIAGE â†’ la page WeddingDetails gÃ¨re l'invitation de faÃ§on dÃ©diÃ©e.
         if (event.getType().isWeddingType()) {
             throw new UnsupportedOperationException(
-                "Les mariages utilisent l'éditeur WeddingDetails dédié. " +
-                "La génération PDF automatique n'est pas disponible pour ce type d'événement."
+                "Les mariages utilisent l'Ã©diteur WeddingDetails dÃ©diÃ©. " +
+                "La gÃ©nÃ©ration PDF automatique n'est pas disponible pour ce type d'Ã©vÃ©nement."
             );
         }
 
-        // is_model_card = true + pdf_url présent → retourner le PDF importé
+        // is_model_card = true + pdf_url prÃ©sent â†’ retourner le PDF importÃ©
         if (Boolean.TRUE.equals(event.getImportMyModelCard())
                 && card != null && card.getPdfUrl() != null) {
             try {
@@ -85,17 +88,17 @@ public class InvitationCardServiceImpl implements InvitationCardService {
         try {
             return pdfGenerator.generate(event, card, null, null);
         } catch (IOException e) {
-            throw new RuntimeException("Erreur lors de la génération du PDF", e);
+            throw new RuntimeException("Erreur lors de la gÃ©nÃ©ration du PDF", e);
         }
     }
 
     @Override
     @Transactional
     public CardResponse uploadCustomModel(Long eventId, MultipartFile file, Long organizerId) {
-        Event event = resolveOwned(eventId, organizerId);
+        Event event = ownershipValidator.resolveOwned(eventId, organizerId);
 
         if (!"application/pdf".equals(file.getContentType())) {
-            throw new IllegalArgumentException("Seuls les fichiers PDF sont acceptés");
+            throw new IllegalArgumentException("Seuls les fichiers PDF sont acceptÃ©s");
         }
 
         String pdfUrl = firebaseStorage.upload(file, path + "/pdfs");
@@ -141,13 +144,5 @@ public class InvitationCardServiceImpl implements InvitationCardService {
                 null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, false, null);
     }
-
-    private Event resolveOwned(Long eventId, Long organizerId) {
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EventNotFoundException(eventId));
-        if (!event.getOrganizer().getId().equals(organizerId)) {
-            throw new EventAccessDeniedException();
-        }
-        return event;
-    }
 }
+

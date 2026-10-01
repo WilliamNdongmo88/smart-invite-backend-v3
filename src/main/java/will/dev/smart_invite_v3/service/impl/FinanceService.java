@@ -20,7 +20,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-public class FinanceService {
+public class FinanceService implements will.dev.smart_invite_v3.service.FinanceServicePort {
 
     @PersistenceContext
     private EntityManager em;

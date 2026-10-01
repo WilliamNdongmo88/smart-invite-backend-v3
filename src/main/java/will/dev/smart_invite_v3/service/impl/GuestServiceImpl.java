@@ -34,18 +34,22 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import will.dev.smart_invite_v3.component.EventOwnershipValidator;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class GuestServiceImpl implements GuestService {
 
-    private final GuestRepository      guestRepository;
-    private final EventRepository      eventRepository;
-    private final InvitationRepository invitationRepository;
-    private final PaymentRepository    paymentRepository;
-    private final EmailService         emailService;
-    private final WhatsAppService      whatsAppService;
+    private final GuestRepository         guestRepository;
+    private final EventRepository         eventRepository;
+    private final InvitationRepository    invitationRepository;
+    private final PaymentRepository       paymentRepository;
+    private final EmailService            emailService;
+    private final WhatsAppService         whatsAppService;
+    private final EventOwnershipValidator ownershipValidator;
+
 
     @Value("${app.frontend.url:http://localhost:4200}")
     private String frontendUrl;
@@ -55,23 +59,23 @@ public class GuestServiceImpl implements GuestService {
     @Override
     @Transactional
     public GuestResponse add(Long eventId, AddGuestRequest request, Long organizerId) {
-        Event event = resolveOwned(eventId, organizerId);
+        Event event = ownershipValidator.resolveOwned(eventId, organizerId);
 
-        // Vérification quota payé
+        // VÃ©rification quota payÃ©
         int approvedQuota = paymentRepository.sumApprovedQuotaByEventId(eventId);
         int currentCount  = guestRepository.countByEventId(eventId);
         if (approvedQuota > 0 && currentCount >= approvedQuota) {
-            throw new RuntimeException("Quota d'invités atteint (" + approvedQuota + "). Souscrivez un nouveau quota.");
+            throw new RuntimeException("Quota d'invitÃ©s atteint (" + approvedQuota + "). Souscrivez un nouveau quota.");
         }
 
-        // Vérification doublons
+        // VÃ©rification doublons
         if (request.email() != null && !request.email().isBlank()
                 && guestRepository.existsByEventIdAndEmail(eventId, request.email())) {
-            throw new RuntimeException("Un invité avec cet email existe déjà pour cet événement");
+            throw new RuntimeException("Un invitÃ© avec cet email existe dÃ©jÃ  pour cet Ã©vÃ©nement");
         }
         if (request.phoneNumber() != null && !request.phoneNumber().isBlank()
                 && guestRepository.existsByEventIdAndPhoneNumber(eventId, request.phoneNumber())) {
-            throw new RuntimeException("Un invité avec ce numéro existe déjà pour cet événement");
+            throw new RuntimeException("Un invitÃ© avec ce numÃ©ro existe dÃ©jÃ  pour cet Ã©vÃ©nement");
         }
 
         Guest guest = Guest.builder()
@@ -86,12 +90,12 @@ public class GuestServiceImpl implements GuestService {
         return GuestResponse.from(guestRepository.save(guest));
     }
 
-    // ---- Liste paginée ----
+    // ---- Liste paginÃ©e ----
 
     @Override
     public Page<GuestResponse> list(Long eventId, String search, RsvpStatus rsvp,
                                     Pageable pageable, Long organizerId) {
-        resolveOwned(eventId, organizerId);
+        ownershipValidator.resolveOwned(eventId, organizerId);
         return guestRepository.findByEventIdFiltered(eventId, search, rsvp, pageable)
                 .map(GuestResponse::from);
     }
@@ -124,12 +128,16 @@ public class GuestServiceImpl implements GuestService {
     @Override
     @Transactional
     public void bulkDelete(BulkDeleteRequest request, Long organizerId) {
-        for (Long guestId : request.guestIds()) {
-            Guest guest = guestRepository.findById(guestId).orElse(null);
-            if (guest == null) continue;
-            if (!guest.getEvent().getOrganizer().getId().equals(organizerId)) continue;
-            deleteGuestWithCleanup(guest);
-        }
+        if (request.guestIds() == null || request.guestIds().isEmpty()) return;
+        List<Guest> ownedGuests = guestRepository.findAllById(request.guestIds()).stream()
+                .filter(g -> g.getEvent().getOrganizer().getId().equals(organizerId))
+                .toList();
+
+        if (ownedGuests.isEmpty()) return;
+
+        List<Long> ownedIds = ownedGuests.stream().map(Guest::getId).toList();
+        invitationRepository.deleteAllByGuestIdIn(ownedIds);
+        guestRepository.deleteAllById(ownedIds);
     }
 
     // ---- US-019 ----
@@ -147,7 +155,7 @@ public class GuestServiceImpl implements GuestService {
         String eventTitle  = guest.getEvent().getTitle();
         String token       = inv != null ? inv.getToken() : null;
         String eventPrefix = guest.getEvent().getType() != null
-                ? guest.getEvent().getType().invitationPrefix() : "à ";
+                ? guest.getEvent().getType().invitationPrefix() : "Ã  ";
 
         // Lien RSVP : {frontendUrl}/invitations/{token}/rsvp
         String rsvpLink = token != null
@@ -160,13 +168,13 @@ public class GuestServiceImpl implements GuestService {
         if ((mode == NotificationMode.EMAIL || mode == NotificationMode.BOTH || mode == null)
                 && email != null && !email.isBlank()) {
             if (rsvpLink == null) {
-                log.warn("Rappel email ignoré pour guest {} : pas d'invitation/token", guestId);
+                log.warn("Rappel email ignorÃ© pour guest {} : pas d'invitation/token", guestId);
             } else {
                 try {
                     emailService.sendReminderEmail(email, guestName, eventTitle, rsvpLink);
                     sentAny = true;
                 } catch (Exception e) {
-                    log.warn("Rappel email échoué pour guest {} : {}", guestId, e.getMessage());
+                    log.warn("Rappel email Ã©chouÃ© pour guest {} : {}", guestId, e.getMessage());
                 }
             }
         }
@@ -175,20 +183,20 @@ public class GuestServiceImpl implements GuestService {
         if ((mode == NotificationMode.WHATSAPP || mode == NotificationMode.BOTH)
                 && phone != null && !phone.isBlank()) {
             if (token == null) {
-                log.warn("Rappel WhatsApp ignoré pour guest {} : pas d'invitation/token", guestId);
+                log.warn("Rappel WhatsApp ignorÃ© pour guest {} : pas d'invitation/token", guestId);
             } else {
                 try {
                     whatsAppService.sendReminderMessage(phone, guestName, eventTitle, token, eventPrefix);
                     sentAny = true;
                 } catch (Exception e) {
-                    log.warn("Rappel WhatsApp échoué pour guest {} : {}", guestId, e.getMessage());
+                    log.warn("Rappel WhatsApp Ã©chouÃ© pour guest {} : {}", guestId, e.getMessage());
                 }
             }
         }
 
         if (!sentAny) {
             throw new RuntimeException(
-                "Impossible d'envoyer le rappel : aucune invitation n’a encore été envoyée à ce contact " + mode);
+                "Impossible d'envoyer le rappel : aucune invitation nâ€™a encore Ã©tÃ© envoyÃ©e Ã  ce contact " + mode);
         }
     }
 
@@ -197,10 +205,20 @@ public class GuestServiceImpl implements GuestService {
     @Override
     @Transactional
     public ImportGuestResult importFromExcel(Long eventId, MultipartFile file, Long organizerId) {
-        Event event = resolveOwned(eventId, organizerId);
+        Event event = ownershipValidator.resolveOwned(eventId, organizerId);
         int imported = 0;
         int skipped  = 0;
         List<String> errors = new ArrayList<>();
+
+        // Quota pré-calculé avant la boucle (évite N+1 requêtes)
+        int approvedQuota = paymentRepository.sumApprovedQuotaByEventId(eventId);
+        int currentCount  = guestRepository.countByEventId(eventId);
+
+        // Pré-chargement des emails et numéros existants (évite N+1 requêtes DB)
+        java.util.Set<String> existingEmails = new java.util.HashSet<>(guestRepository.findEmailsByEventId(eventId));
+        java.util.Set<String> existingPhones = new java.util.HashSet<>(guestRepository.findPhoneNumbersByEventId(eventId));
+
+        List<Guest> guestsToSave = new ArrayList<>();
 
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -221,29 +239,33 @@ public class GuestServiceImpl implements GuestService {
                     continue;
                 }
 
-                // Vérification doublons
-                if (email != null && !email.isBlank()
-                        && guestRepository.existsByEventIdAndEmail(eventId, email)) {
+                // Vérification doublons en mémoire (O(1) sans requête DB)
+                String normalizedEmail = email != null ? email.trim().toLowerCase() : null;
+                String normalizedPhone = phone != null ? phone.trim() : null;
+
+                if (normalizedEmail != null && !normalizedEmail.isBlank()
+                        && existingEmails.contains(normalizedEmail)) {
                     errors.add("Ligne " + (i + 1) + " ignorée : email '" + email + "' déjà existant");
                     skipped++;
                     continue;
                 }
-                if (phone != null && !phone.isBlank()
-                        && guestRepository.existsByEventIdAndPhoneNumber(eventId, phone)) {
+                if (normalizedPhone != null && !normalizedPhone.isBlank()
+                        && existingPhones.contains(normalizedPhone)) {
                     errors.add("Ligne " + (i + 1) + " ignorée : téléphone '" + phone + "' déjà existant");
                     skipped++;
                     continue;
                 }
 
                 // Quota
-                int approvedQuota = paymentRepository.sumApprovedQuotaByEventId(eventId);
-                int currentCount  = guestRepository.countByEventId(eventId);
-                if (approvedQuota > 0 && currentCount >= approvedQuota) {
+                if (approvedQuota > 0 && (currentCount + guestsToSave.size()) >= approvedQuota) {
                     errors.add("Ligne " + (i + 1) + " et suivantes ignorées : quota atteint (" + approvedQuota + ")");
                     break;
                 }
 
-                NotificationMode mode = NotificationMode.EMAIL; // défaut
+                if (normalizedEmail != null && !normalizedEmail.isBlank()) existingEmails.add(normalizedEmail);
+                if (normalizedPhone != null && !normalizedPhone.isBlank()) existingPhones.add(normalizedPhone);
+
+                NotificationMode mode = NotificationMode.EMAIL; // dÃ©faut
                 if (notifRaw != null) {
                     try { mode = NotificationMode.valueOf(notifRaw.toUpperCase().trim()); }
                     catch (IllegalArgumentException ignored) {}
@@ -263,8 +285,12 @@ public class GuestServiceImpl implements GuestService {
                         .notificationMode(mode)
                         .tableNumber(tableNumber)
                         .build();
-                guestRepository.save(guest);
+                guestsToSave.add(guest);
                 imported++;
+            }
+
+            if (!guestsToSave.isEmpty()) {
+                guestRepository.saveAll(guestsToSave);
             }
         } catch (IOException e) {
             throw new RuntimeException("Impossible de lire le fichier Excel : " + e.getMessage());
@@ -288,7 +314,7 @@ public class GuestServiceImpl implements GuestService {
 
     private void deleteGuestWithCleanup(Guest guest) {
         // La suppression en cascade (ON DELETE CASCADE) supprime l'invitation en DB
-        // Les fichiers Firebase (QR + PDF) sont orphelins — nettoyage best-effort
+        // Les fichiers Firebase (QR + PDF) sont orphelins â€” nettoyage best-effort
         invitationRepository.findByGuestId(guest.getId()).ifPresent(inv -> {
             log.info("Suppression invitation {} (guest {})", inv.getId(), guest.getId());
             invitationRepository.delete(inv);
@@ -296,17 +322,11 @@ public class GuestServiceImpl implements GuestService {
         guestRepository.delete(guest);
     }
 
-    private Event resolveOwned(Long eventId, Long organizerId) {
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EventNotFoundException(eventId));
-        if (!event.getOrganizer().getId().equals(organizerId)) throw new EventAccessDeniedException();
-        return event;
-    }
-
     private Guest resolveOwnedGuest(Long guestId, Long organizerId) {
         Guest guest = guestRepository.findById(guestId)
-                .orElseThrow(() -> new RuntimeException("Invité introuvable : " + guestId));
+                .orElseThrow(() -> new RuntimeException("InvitÃ© introuvable : " + guestId));
         if (!guest.getEvent().getOrganizer().getId().equals(organizerId)) throw new EventAccessDeniedException();
         return guest;
     }
 }
+

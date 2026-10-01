@@ -26,6 +26,12 @@ public interface GuestRepository extends JpaRepository<Guest, Long> {
     boolean existsByEventIdAndEmail(Long eventId, String email);
     boolean existsByEventIdAndPhoneNumber(Long eventId, String phoneNumber);
 
+    @Query("SELECT LOWER(g.email) FROM Guest g WHERE g.event.id = :eventId AND g.email IS NOT NULL")
+    List<String> findEmailsByEventId(@Param("eventId") Long eventId);
+
+    @Query("SELECT g.phoneNumber FROM Guest g WHERE g.event.id = :eventId AND g.phoneNumber IS NOT NULL")
+    List<String> findPhoneNumbersByEventId(@Param("eventId") Long eventId);
+
     int countByEventId(Long eventId);
 
     long countByEventIdAndRsvpStatus(Long eventId, RsvpStatus rsvpStatus);

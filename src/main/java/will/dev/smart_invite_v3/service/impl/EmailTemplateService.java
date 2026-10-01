@@ -13,7 +13,7 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class EmailTemplateService {
+public class EmailTemplateService implements will.dev.smart_invite_v3.service.EmailTemplateServicePort {
 
     @Value("${spring.profiles.active:dev}")
     private String activeProfile;

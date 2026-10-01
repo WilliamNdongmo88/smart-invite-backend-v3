@@ -34,7 +34,7 @@ import java.util.Locale;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class InvitationPdfService {
+public class InvitationPdfService implements will.dev.smart_invite_v3.service.InvitationPdfServicePort {
 
     private final FirebaseStorageService firebaseStorage;
 

@@ -53,7 +53,17 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public List<OrganizerSummaryResponse> getAllOrganizers() {
         List<User> organizers = userRepository.findAllByRoleOrderByCreatedAtDesc(UserRole.USER);
+        return mapOrganizers(organizers);
+    }
 
+    @Override
+    public org.springframework.data.domain.Page<OrganizerSummaryResponse> getAllOrganizers(org.springframework.data.domain.Pageable pageable) {
+        org.springframework.data.domain.Page<User> page = userRepository.findAllByRoleOrderByCreatedAtDesc(UserRole.USER, pageable);
+        List<OrganizerSummaryResponse> content = mapOrganizers(page.getContent());
+        return new org.springframework.data.domain.PageImpl<>(content, pageable, page.getTotalElements());
+    }
+
+    private List<OrganizerSummaryResponse> mapOrganizers(List<User> organizers) {
         List<Long> organizerIds = organizers.stream().map(User::getId).toList();
 
         List<Event> allEvents = organizerIds.stream()

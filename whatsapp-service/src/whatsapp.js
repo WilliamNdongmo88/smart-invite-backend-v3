@@ -1,6 +1,7 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const axios  = require('axios');
+const { sendFiles } = require('./sender');
 
 // ── Capture globale pour éviter le crash du process ──────────────────────────
 process.on('uncaughtException', (err) => {
@@ -26,8 +27,40 @@ let isReady       = false;
 let client        = null;
 let reconnectTimer = null;
 
+// ── pendingRsvp persistant (WA1) ──────────────────────────────────────────────
+// Fichier JSON local pour survivre aux redémarrages du service Node.
+const fs   = require('fs');
+const path = require('path');
+const RSVP_STORE_PATH = path.join(__dirname, '..', 'data', 'pending-rsvp.json');
+
+/** Charge la Map depuis le fichier JSON (crée le dossier/fichier si absent). */
+function loadRsvpStore() {
+    try {
+        fs.mkdirSync(path.dirname(RSVP_STORE_PATH), { recursive: true });
+        if (fs.existsSync(RSVP_STORE_PATH)) {
+            const raw = fs.readFileSync(RSVP_STORE_PATH, 'utf8');
+            return new Map(Object.entries(JSON.parse(raw)));
+        }
+    } catch (e) {
+        console.warn('[WhatsApp] Impossible de charger pending-rsvp.json :', e.message);
+    }
+    return new Map();
+}
+
+/** Persiste la Map dans le fichier JSON (écrasement atomique). */
+function saveRsvpStore() {
+    try {
+        fs.mkdirSync(path.dirname(RSVP_STORE_PATH), { recursive: true });
+        const tmp = RSVP_STORE_PATH + '.tmp';
+        fs.writeFileSync(tmp, JSON.stringify(Object.fromEntries(pendingRsvp)), 'utf8');
+        fs.renameSync(tmp, RSVP_STORE_PATH);
+    } catch (e) {
+        console.warn('[WhatsApp] Impossible de sauvegarder pending-rsvp.json :', e.message);
+    }
+}
+
 // Map : numéro normalisé → { token, guestName, eventTitle, eventType }
-const pendingRsvp = new Map();
+const pendingRsvp = loadRsvpStore();
 
 // ── Factory : crée et initialise un client ────────────────────────────────────
 function createClient() {
@@ -155,6 +188,7 @@ function createClient() {
             try {
                 await axios.post(`${backendUrl}/api/invitations/${rsvp.token}/rsvp`, { status: 'DECLINED' });
                 pendingRsvp.delete(senderNumber);
+                saveRsvpStore();
                 await c.sendMessage(msg.from,
                     `😔 *${rsvp.guestName}*, nous avons bien pris note de votre absence à *${rsvp.eventTitle}*.\nMerci de nous avoir informés.`);
             } catch (err) {
@@ -193,44 +227,34 @@ function createClient() {
                 { status: 'CONFIRMED' }
             );
             pendingRsvp.delete(senderNumber);
+            saveRsvpStore();
 
             const data      = response.data?.data || response.data;
             const qrCodeUrl = data?.qrCodeUrl;
 
-            // ── Envoi du QR via /api/send-files (contourne le bug de memoization) ──
-            // On télécharge le QR depuis Firebase → base64 → POST /api/send-files
+            // ── Envoi du QR via sender.sendFiles() (évite le self-loop HTTP) ──
+            // On télécharge le QR depuis Firebase → base64 → envoi direct
             if (qrCodeUrl) {
                 try {
                     const qrResponse = await axios.get(qrCodeUrl, { responseType: 'arraybuffer' });
                     const qrBase64   = Buffer.from(qrResponse.data).toString('base64');
 
-                    const serviceUrl = `http://localhost:${process.env.PORT || 3001}`;
-                    await axios.post(
-                        `${serviceUrl}/api/send-files`,
-                        {
-                            to:      senderNumber,
-                            qrBase64,
-                            message: [
-                                '━━━━━━━━━━━━━━━━━━━━━━',
-                                '🎊 Nous avons hâte de vous accueillir !',
-                                `À très bientôt ${rsvp.eventType} *${rsvp.eventTitle}* 💫`,
-                                '━━━━━━━━━━━━━━━━━━━━━━',
-                                '',
-                                '╔═════════════════════╗',
-                                '               🌐 smart-invite.com',
-                                '╚═════════════════════╝',
-                            ].join('\n'),
-                        },
-                        {
-                            headers: {
-                                'Content-Type':  'application/json',
-                                'x-api-secret':  process.env.API_SECRET,
-                            },
-                        }
-                    );
+                    await sendFiles(c, senderNumber, {
+                        qrBase64,
+                        message: [
+                            '━━━━━━━━━━━━━━━━━━━━━━',
+                            '🎊 Nous avons hâte de vous accueillir !',
+                            `À très bientôt ${rsvp.eventType} *${rsvp.eventTitle}* 💫`,
+                            '━━━━━━━━━━━━━━━━━━━━━━',
+                            '',
+                            '╔═════════════════════╗',
+                            '               🌐 smart-invite.com',
+                            '╚═════════════════════╝',
+                        ].join('\n'),
+                    });
                     console.log(`[WhatsApp] RSVP CONFIRMED + QR envoyé à ${senderNumber}`);
                 } catch (e) {
-                    console.warn('[WhatsApp] Échec envoi QR via send-files :', e.message);
+                    console.warn('[WhatsApp] Échec envoi QR via sendFiles :', e.message);
                 }
             } else {
                 // Pas de QR — envoyer juste le message de clôture en texte
@@ -317,6 +341,7 @@ client.initialize().catch((err) => {
 function registerRsvp(phoneNumber, token, guestName, eventTitle, eventType) {
     const normalized = phoneNumber.replace(/[\s\-\+]/g, '');
     pendingRsvp.set(normalized, { token, guestName, eventTitle, eventType });
+    saveRsvpStore();
 }
 
 module.exports = {

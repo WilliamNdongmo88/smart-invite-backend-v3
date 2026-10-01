@@ -19,6 +19,7 @@ import will.dev.smart_invite_v3.exception.EventNotFoundException;
 import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.GuestRepository;
 import will.dev.smart_invite_v3.repository.UserRepository;
+import will.dev.smart_invite_v3.component.EventOwnershipValidator;
 import will.dev.smart_invite_v3.service.FirebaseStorageService;
 import will.dev.smart_invite_v3.service.RedisService;
 
@@ -49,6 +50,9 @@ class EventServiceImplTest {
     @Mock
     private FirebaseStorageService firebaseStorage;
 
+    @Mock
+    private EventOwnershipValidator ownershipValidator;
+
     @InjectMocks
     private EventServiceImpl eventService;
 
@@ -72,7 +76,7 @@ class EventServiceImplTest {
     @Test
     @DisplayName("getStats devrait retourner le nombre réel d'invités et le taux d'occupation")
     void getStats_shouldReturnRealCountsAndOccupancy() {
-        when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+        when(ownershipValidator.resolveOwned(10L, 1L)).thenReturn(event);
         when(guestRepository.countByEventId(10L)).thenReturn(50);
         when(guestRepository.countByEventIdAndRsvpStatus(10L, RsvpStatus.CONFIRMED)).thenReturn(30L);
         when(guestRepository.countByEventIdAndRsvpStatus(10L, RsvpStatus.PENDING)).thenReturn(15L);
@@ -91,7 +95,7 @@ class EventServiceImplTest {
     @Test
     @DisplayName("getStats devrait lancer EventAccessDeniedException si l'utilisateur n'est pas le créateur")
     void getStats_shouldThrowAccessDenied_whenNotOrganizer() {
-        when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+        when(ownershipValidator.resolveOwned(10L, 999L)).thenThrow(new EventAccessDeniedException());
 
         assertThatThrownBy(() -> eventService.getStats(10L, 999L))
                 .isInstanceOf(EventAccessDeniedException.class);
@@ -100,7 +104,7 @@ class EventServiceImplTest {
     @Test
     @DisplayName("getStats devrait lancer EventNotFoundException si l'événement n'existe pas")
     void getStats_shouldThrowNotFound_whenEventMissing() {
-        when(eventRepository.findById(999L)).thenReturn(Optional.empty());
+        when(ownershipValidator.resolveOwned(999L, 1L)).thenThrow(new EventNotFoundException(999L));
 
         assertThatThrownBy(() -> eventService.getStats(999L, 1L))
                 .isInstanceOf(EventNotFoundException.class);
@@ -110,7 +114,7 @@ class EventServiceImplTest {
     @DisplayName("getThankYouTemplate retourne les valeurs par défaut quand aucun template personnalisé n'est configuré")
     void getThankYouTemplate_shouldReturnDefault_whenTemplateNull() {
         event.setThankYouTemplate(null);
-        when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+        when(ownershipValidator.resolveOwned(10L, 1L)).thenReturn(event);
 
         ThankYouTemplateResponse res = eventService.getThankYouTemplate(10L, 1L);
 
@@ -129,7 +133,7 @@ class EventServiceImplTest {
                 .conclusion("À bientôt !")
                 .build();
         event.setThankYouTemplate(custom);
-        when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+        when(ownershipValidator.resolveOwned(10L, 1L)).thenReturn(event);
 
         ThankYouTemplateResponse res = eventService.getThankYouTemplate(10L, 1L);
 

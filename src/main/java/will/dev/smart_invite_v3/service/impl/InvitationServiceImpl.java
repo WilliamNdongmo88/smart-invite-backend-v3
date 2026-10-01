@@ -29,6 +29,7 @@ import will.dev.smart_invite_v3.service.EmailService;
 import will.dev.smart_invite_v3.service.FirebaseStorageService;
 import will.dev.smart_invite_v3.service.InvitationService;
 import will.dev.smart_invite_v3.service.WhatsAppService;
+import will.dev.smart_invite_v3.component.EventOwnershipValidator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,6 +52,8 @@ public class InvitationServiceImpl implements InvitationService {
     private final EmailService             emailService;
     private final WhatsAppService          whatsAppService;
     private final NotificationDispatcher   notificationDispatcher;
+    private final EventOwnershipValidator  ownershipValidator;
+
 
     @Value("${app.base.url}")
     private String apiUrl;
@@ -69,7 +72,7 @@ public class InvitationServiceImpl implements InvitationService {
     @Override
     @Transactional
     public InvitationResponse generate(Long eventId, CreateGuestRequest request, Long organizerId) {
-        Event event = resolveOwned(eventId, organizerId);
+        Event event = ownershipValidator.resolveOwned(eventId, organizerId);
         checkPaymentApproved(eventId, organizerId);
 
         Guest guest = Guest.builder()
@@ -89,7 +92,7 @@ public class InvitationServiceImpl implements InvitationService {
     @Override
     @Transactional
     public BulkGenerateResponse bulkGenerate(BulkGenerateRequest request, Long organizerId) {
-        Event event = resolveOwned(request.eventId(), organizerId);
+        Event event = ownershipValidator.resolveOwned(request.eventId(), organizerId);
         checkPaymentApproved(request.eventId(), organizerId);
 
         List<InvitationResponse> generated = new ArrayList<>();
@@ -98,22 +101,22 @@ public class InvitationServiceImpl implements InvitationService {
         for (Long guestId : request.guestIds()) {
             Guest guest = guestRepository.findById(guestId).orElse(null);
             if (guest == null) {
-                skippedReasons.add("Invité introuvable : " + guestId);
+                skippedReasons.add("InvitÃ© introuvable : " + guestId);
                 continue;
             }
             if (!guest.getEvent().getId().equals(event.getId())) {
-                skippedReasons.add("Invité " + guestId + " n'appartient pas à cet événement");
+                skippedReasons.add("InvitÃ© " + guestId + " n'appartient pas Ã  cet Ã©vÃ©nement");
                 continue;
             }
             if (invitationRepository.existsByGuestId(guestId)) {
-                skippedReasons.add("Invitation déjà générée pour " + guest.getFullName());
+                skippedReasons.add("Invitation dÃ©jÃ  gÃ©nÃ©rÃ©e pour " + guest.getFullName());
                 continue;
             }
             try {
                 generated.add(doGenerate(guest, event));
             } catch (Exception e) {
                 skippedReasons.add("Erreur pour " + guest.getFullName() + " : " + e.getMessage());
-                log.warn("Erreur génération invitation guest {} : {}", guestId, e.getMessage());
+                log.warn("Erreur gÃ©nÃ©ration invitation guest {} : {}", guestId, e.getMessage());
             }
         }
 
@@ -133,7 +136,7 @@ public class InvitationServiceImpl implements InvitationService {
         Invitation inv = invitationRepository.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Invitation introuvable"));
         if (inv.getStatus() == InvitationStatus.REVOKED) {
-            throw new RuntimeException("Cette invitation a été révoquée");
+            throw new RuntimeException("Cette invitation a Ã©tÃ© rÃ©voquÃ©e");
         }
         return PublicInvitationResponse.from(inv);
     }
@@ -145,7 +148,7 @@ public class InvitationServiceImpl implements InvitationService {
     public void delete(Long invitationId, Long organizerId) {
         Invitation inv = invitationRepository.findById(invitationId)
                 .orElseThrow(() -> new RuntimeException("Invitation introuvable : " + invitationId));
-        resolveOwned(inv.getGuest().getEvent().getId(), organizerId);
+        ownershipValidator.resolveOwned(inv.getGuest().getEvent().getId(), organizerId);
         deleteFirebaseFiles(inv);
         Guest guest = inv.getGuest();
         if (guest.getRsvpStatus() == RsvpStatus.CONFIRMED) {
@@ -159,9 +162,16 @@ public class InvitationServiceImpl implements InvitationService {
 
     @Override
     public List<InvitationResponse> listByEvent(Long eventId, Long organizerId) {
-        resolveOwned(eventId, organizerId);
+        ownershipValidator.resolveOwned(eventId, organizerId);
         return invitationRepository.findAllByGuestEventId(eventId)
                 .stream().map(InvitationResponse::from).toList();
+    }
+
+    @Override
+    public org.springframework.data.domain.Page<InvitationResponse> listByEvent(Long eventId, org.springframework.data.domain.Pageable pageable, Long organizerId) {
+        ownershipValidator.resolveOwned(eventId, organizerId);
+        return invitationRepository.findAllByGuestEventId(eventId, pageable)
+                .map(InvitationResponse::from);
     }
 
     // ---- RSVP ----
@@ -172,7 +182,7 @@ public class InvitationServiceImpl implements InvitationService {
         Invitation inv = invitationRepository.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Invitation introuvable"));
         if (inv.getStatus() == InvitationStatus.REVOKED) {
-            throw new RuntimeException("Cette invitation a été révoquée");
+            throw new RuntimeException("Cette invitation a Ã©tÃ© rÃ©voquÃ©e");
         }
         Guest guest = inv.getGuest();
         guest.setRsvpStatus(request.status());
@@ -194,7 +204,7 @@ public class InvitationServiceImpl implements InvitationService {
                         buildRsvpWhatsAppMessage(guest.getFullName(), event.getTitle(), event.getType(), request.status().name()))
         );
 
-        // Génération QR + envoi confirmation si CONFIRMED (plus de PDF)
+        // GÃ©nÃ©ration QR + envoi confirmation si CONFIRMED (plus de PDF)
         if (request.status() == RsvpStatus.CONFIRMED) {
             checkQuotaAvailable(event.getId());
             try {
@@ -204,7 +214,7 @@ public class InvitationServiceImpl implements InvitationService {
                 byte[] qrBytes = qrCodeService.generateWithColor(publicUrl);
                 String qrUrl = firebaseStorage.uploadBytes(qrBytes, folder, token + "_qr.png", "image/png");
 
-                // Lien vers la page de l'événement (avec mode prévisualisation)
+                // Lien vers la page de l'Ã©vÃ©nement (avec mode prÃ©visualisation)
                 String eventPageUrl = buildEventPageUrl(event);
 
                 inv.setQrCodeUrl(qrUrl);
@@ -219,7 +229,7 @@ public class InvitationServiceImpl implements InvitationService {
                 incrementSentInvitations(event.getId());
 
             } catch (Exception e) {
-                log.warn("Génération/envoi confirmation échoué pour {} : {}", guest.getFullName(), e.getMessage());
+                log.warn("GÃ©nÃ©ration/envoi confirmation Ã©chouÃ© pour {} : {}", guest.getFullName(), e.getMessage());
             }
         }
 
@@ -235,11 +245,11 @@ public class InvitationServiceImpl implements InvitationService {
         Event event = inv.getGuest().getEvent();
         String url = firebaseStorage.upload(file, activeProfile + "/events/photos");
 
-        // Mettre à jour la colonne dédiée
+        // Mettre Ã  jour la colonne dÃ©diÃ©e
         event.setCouplePhotoUrl(url);
 
         eventRepository.save(event);
-        log.info("[Invitation] Photo mise à jour pour l'événement {} via token {} -> {}", event.getId(), token, url);
+        log.info("[Invitation] Photo mise Ã  jour pour l'Ã©vÃ©nement {} via token {} -> {}", event.getId(), token, url);
         return url;
     }
 
@@ -248,7 +258,7 @@ public class InvitationServiceImpl implements InvitationService {
     @Override
     @Transactional
     public InvitationResponse generateFromLink(Long eventId, CreateGuestRequest request, Long organizerId) {
-        Event event = resolveOwned(eventId, organizerId);
+        Event event = ownershipValidator.resolveOwned(eventId, organizerId);
         checkPaymentApproved(eventId, organizerId);
         checkQuotaAvailable(eventId);
 
@@ -272,7 +282,7 @@ public class InvitationServiceImpl implements InvitationService {
             qrBytes = qrCodeService.generateWithColor(publicUrl);
             qrUrl = firebaseStorage.uploadBytes(qrBytes, folder, token + "_qr.png", "image/png");
         } catch (Exception e) {
-            log.warn("Erreur génération QR via lien pour {} : {}", guest.getEmail(), e.getMessage());
+            log.warn("Erreur gÃ©nÃ©ration QR via lien pour {} : {}", guest.getEmail(), e.getMessage());
         }
 
         Invitation invitation = Invitation.builder()
@@ -301,8 +311,8 @@ public class InvitationServiceImpl implements InvitationService {
     // ---- Core generation ----
 
     /**
-     * Construit l'URL de la page de l'événement côté frontend pour les invités.
-     * Utilise ?preview_details=true (distinct de ?preview=true réservé à l'organisateur).
+     * Construit l'URL de la page de l'Ã©vÃ©nement cÃ´tÃ© frontend pour les invitÃ©s.
+     * Utilise ?preview_details=true (distinct de ?preview=true rÃ©servÃ© Ã  l'organisateur).
      * Ex : http://localhost:4200/events/2/wedding?preview_details=true
      */
     private String buildEventPageUrl(Event event) {
@@ -348,7 +358,7 @@ public class InvitationServiceImpl implements InvitationService {
         try {
             return pdfCardGeneratorService.generate(event, card, qrBytes, guestName);
         } catch (Exception e) {
-            log.warn("Erreur génération PDF pour {} : {}", guestName, e.getMessage());
+            log.warn("Erreur gÃ©nÃ©ration PDF pour {} : {}", guestName, e.getMessage());
             return null;
         }
     }
@@ -365,7 +375,7 @@ public class InvitationServiceImpl implements InvitationService {
             .ifPresent(payment -> {
                 if (payment.getSentInvitations() >= payment.getPaidQuota()) {
                     throw new RuntimeException(
-                        "Quota d'invitations épuisé : vous avez atteint la limite de " +
+                        "Quota d'invitations Ã©puisÃ© : vous avez atteint la limite de " +
                         payment.getPaidQuota() + " invitations. Veuillez soumettre une nouvelle preuve de paiement.");
                 }
             });
@@ -375,7 +385,7 @@ public class InvitationServiceImpl implements InvitationService {
         if (!paymentRepository.existsByEventIdAndOrganizerIdAndStatus(
                 eventId, organizerId, will.dev.smart_invite_v3.enums.PaymentStatus.APPROVED)) {
             throw new RuntimeException(
-                "Paiement requis : veuillez effectuer et faire approuver votre paiement avant de générer des invitations.");
+                "Paiement requis : veuillez effectuer et faire approuver votre paiement avant de gÃ©nÃ©rer des invitations.");
         }
     }
 
@@ -395,7 +405,7 @@ public class InvitationServiceImpl implements InvitationService {
                                     payment.getPaidQuota()),
                             () -> whatsAppService.sendOrganizerTextMessage(
                                     payment.getOrganizer().getPhone(),
-                                    "⚠️ *Quota atteint !*\n\nVous avez atteint votre quota de *" +
+                                    "âš ï¸ *Quota atteint !*\n\nVous avez atteint votre quota de *" +
                                     payment.getPaidQuota() + " invitations* pour *" +
                                     payment.getEvent().getTitle() + "*.\n" +
                                     "Soumettez une nouvelle preuve de paiement pour continuer.")
@@ -405,28 +415,20 @@ public class InvitationServiceImpl implements InvitationService {
     }
 
     private String buildRsvpWhatsAppMessage(String guestName, String eventTitle, EventType eventType, String status) {
-        String label = "CONFIRMED".equals(status) ? "confirmé ✅" : "décliné ❌";
+        String label = "CONFIRMED".equals(status) ? "confirmÃ© âœ…" : "dÃ©clinÃ© âŒ";
         return String.join("\n",
-            "╔═════════════════════╗",
-            "              ✉️ *SMART INVITE*",
-            "╚═════════════════════╝",
+            "â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—",
+            "              âœ‰ï¸ *SMART INVITE*",
+            "â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•",
             "",
-            "📩 *Réponse RSVP reçue*",
+            "ðŸ“© *RÃ©ponse RSVP reÃ§ue*",
             "",
             "*" + guestName + "* a *" + label + "* sa participation "+ eventType.invitationPrefix() +" *" + eventTitle + "*.",
             "",
-            "━━━━━━━━━━━━━━━━━━━━━━",
-            "              🌐 smart-invite.com",
-            "━━━━━━━━━━━━━━━━━━━━━━"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”",
+            "              ðŸŒ smart-invite.com",
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”"
         );
     }
-
-    private Event resolveOwned(Long eventId, Long organizerId) {
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EventNotFoundException(eventId));
-        if (!event.getOrganizer().getId().equals(organizerId)) {
-            throw new EventAccessDeniedException();
-        }
-        return event;
-    }
 }
+
