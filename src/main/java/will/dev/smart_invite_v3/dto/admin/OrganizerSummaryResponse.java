@@ -10,6 +10,7 @@ public record OrganizerSummaryResponse(
         String phone,
         Boolean isActive,
         Boolean isBlocked,
+        String referralCode,
         LocalDateTime createdAt,
         List<EventSummaryResponse> events
 ) {}

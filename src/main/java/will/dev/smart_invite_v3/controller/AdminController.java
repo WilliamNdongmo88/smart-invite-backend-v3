@@ -73,6 +73,19 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success("Utilisateur supprimé"));
     }
 
+    @PatchMapping("/users/{userId}/referral-code")
+    @Operation(summary = "Attribuer ou modifier le code de recommandation d'un utilisateur")
+    public ResponseEntity<ApiResponse<Void>> assignReferralCode(
+            @PathVariable Long userId,
+            @Valid @RequestBody will.dev.smart_invite_v3.dto.admin.AssignReferralCodeRequest request
+    ) {
+        adminService.assignReferralCode(userId, request.referralCode());
+        String msg = (request.referralCode() != null && !request.referralCode().isBlank())
+                ? "Code de recommandation attribué avec succès"
+                : "Code de recommandation retiré avec succès";
+        return ResponseEntity.ok(ApiResponse.success(msg));
+    }
+
     // ──────────── Messages de contact (usernews) ────────────────────────
 
     @GetMapping("/contacts")

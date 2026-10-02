@@ -23,6 +23,9 @@ public interface AdminService {
 
     void deleteUser(Long userId);
 
+    /** Attribue ou met à jour le code de recommandation d'un utilisateur */
+    void assignReferralCode(Long userId, String referralCode);
+
     /** Retourne tous les messages de contact reçus, du plus récent au plus ancien */
     List<UserNewsResponse> getAllContacts();
 

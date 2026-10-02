@@ -17,6 +17,7 @@ import will.dev.smart_invite_v3.enums.PaymentStatus;
 import will.dev.smart_invite_v3.enums.RsvpStatus;
 import will.dev.smart_invite_v3.enums.UserRole;
 import will.dev.smart_invite_v3.exception.UserNotFoundException;
+import will.dev.smart_invite_v3.entity.Referrer;
 import will.dev.smart_invite_v3.repository.EventRepository;
 import will.dev.smart_invite_v3.repository.GuestRepository;
 import will.dev.smart_invite_v3.repository.PaymentRepository;
@@ -24,6 +25,7 @@ import will.dev.smart_invite_v3.repository.UserNewsRepository;
 import will.dev.smart_invite_v3.repository.UserRepository;
 import will.dev.smart_invite_v3.service.AdminService;
 import will.dev.smart_invite_v3.service.EmailService;
+import will.dev.smart_invite_v3.service.ReferrerService;
 import will.dev.smart_invite_v3.service.WhatsAppService;
 
 import java.util.List;
@@ -42,6 +44,7 @@ public class AdminServiceImpl implements AdminService {
     private final UserNewsRepository userNewsRepository;
     private final WhatsAppService    whatsAppService;
     private final EmailService       emailService;
+    private final ReferrerService    referrerService;
 
     @Value("${app.admin.email}")
     private String adminEmail;
@@ -102,6 +105,7 @@ public class AdminServiceImpl implements AdminService {
                     user.getPhone(),
                     user.getIsActive(),
                     user.getIsBlocked(),
+                    user.getReferralCode(),
                     user.getCreatedAt(),
                     events
             );
@@ -203,6 +207,50 @@ public class AdminServiceImpl implements AdminService {
     public void deleteUser(Long userId) {
         User user = resolve(userId);
         userRepository.delete(user);
+    }
+
+    @Override
+    @Transactional
+    public void assignReferralCode(Long userId, String referralCode) {
+        User user = resolve(userId);
+
+        if (referralCode == null || referralCode.isBlank()) {
+            user.setReferralCode(null);
+            userRepository.save(user);
+            return;
+        }
+
+        String cleanCode = referralCode.trim().toUpperCase();
+        Referrer referrer = referrerService.getActiveByCode(cleanCode);
+
+        user.setReferralCode(referrer.getCode());
+        userRepository.save(user);
+
+        // Rétro-affecter aux événements de l'organisateur qui n'ont pas encore de code
+        List<Event> events = eventRepository.findAllByOrganizerIdOrderByCreatedAtDesc(userId);
+        boolean eventUpdated = false;
+        for (Event event : events) {
+            if (event.getReferralCode() == null || event.getReferralCode().isBlank()) {
+                event.setReferralCode(referrer.getCode());
+                eventUpdated = true;
+            }
+        }
+        if (eventUpdated) {
+            eventRepository.saveAll(events);
+        }
+
+        // Rétro-affecter aux paiements de l'organisateur qui n'ont pas encore de code
+        List<Payment> payments = paymentRepository.findAllByOrganizerIdOrderByCreatedAtDesc(userId);
+        boolean paymentUpdated = false;
+        for (Payment payment : payments) {
+            if (payment.getReferralCode() == null || payment.getReferralCode().isBlank()) {
+                payment.setReferralCode(referrer.getCode());
+                paymentUpdated = true;
+            }
+        }
+        if (paymentUpdated) {
+            paymentRepository.saveAll(payments);
+        }
     }
 
     // ──────────────────────────────────────────────────────────────────
